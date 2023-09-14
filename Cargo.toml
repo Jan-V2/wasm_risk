@@ -15,6 +15,7 @@ crate-type = ["cdylib"]
 console_error_panic_hook = "0.1.7"
 futures = "0.3.28"
 js-sys = "0.3.64"
+queues = "1.1.0"
 wasm-bindgen = "0.2.87"
 wasm-timer = "0.2.5"
 

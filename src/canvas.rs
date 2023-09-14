@@ -2,7 +2,8 @@ use wasm_bindgen::Clamped;
 use wasm_bindgen::prelude::*;
 use web_sys::{CanvasRenderingContext2d, HtmlCanvasElement, HtmlImageElement, ImageData, MouseEvent};
 use crate::element_getters::*;
-
+extern crate queues;
+use queues::*;
 
 #[wasm_bindgen]
 extern "C" {
@@ -19,6 +20,7 @@ macro_rules! console_log {
 }
 
 pub fn ui_init_canvas(){
+    // inits canvas click handeler
     let canvas = get_canvas();
     let context = get_drawing_context(&canvas);
 
@@ -38,50 +40,90 @@ pub fn ui_init_canvas(){
         let img_data = context2.get_image_data(0f64, 0f64
                                                , canvas2.width() as f64, canvas2.height() as f64).unwrap().data();
         let array_idx = (_event.y() *  canvas2.width() as i32 + _event.offset_x()) * 4;
-        console_log!("color = {}, {}, {}", img_data[array_idx as usize], img_data[array_idx as usize + 1]
-            , img_data[array_idx as usize + 2] );
-
+        console_log!("coord xy: {}, {} color = {}, {}, {}", _event.x(), _event.y(), img_data[array_idx as usize],
+            img_data[array_idx as usize + 1], img_data[array_idx as usize + 2] );
     });
     let _ = canvas.add_event_listener_with_callback("click", px_color_clos.as_ref().unchecked_ref());
     px_color_clos.forget();
 }
 
 
-pub fn ui_init_canvas_test_btn(){
+pub fn ui_init_canvas_test_btn(start_point:[i32; 2], max_color_div:i32){
+    // inits click for test button
     let button = get_button_by_id("nuke_btn");
     let closure_btn = Closure::<dyn FnMut(_)>::new(move |_event: MouseEvent| {
         console_log!("removing pixels");
 
-        let canvas2 = get_canvas();
-        let context2 = get_drawing_context(&canvas2);
-        let img = context2.get_image_data(0f64, 0f64
-                                          , canvas2.width() as f64, canvas2.height() as f64).unwrap();
-        let mut img_data = img.data();
+        let canvas = get_canvas();
+        let context = get_drawing_context(&canvas);
+        let img = context.get_image_data(0f64, 0f64
+                                         , canvas.width() as f64, canvas.height() as f64).unwrap();
+        let img_data = img.data();
 
-        let max_color_value = get_html_input_by_id("range").value().parse::<i32>().unwrap();
-        let mut px_removed  = 0;
-        for px_x in 0..canvas2.width(){
-            for px_y in 0..canvas2.height(){
-                let idx = (px_y * canvas2.width() as u32 + px_x) * 4;
-                let mut remove = false;
-                for i in 0..3{
-                    if img_data[idx as usize + i] > max_color_value as u8{
-                        remove = true;
-                        break;
-                    }
+        fn get_nearby_coords(point:[i32; 2]) -> Vec<[i32; 2]> {
+            let mut ret:Vec<[i32; 2]> = Vec::new();
+            ret.push([point[0] + 1, point[1]]);
+            ret.push([point[0] - 1, point[1]]);
+            ret.push([point[0], point[1] + 1]);
+            ret.push([point[0], point[1] - 1]);
+            return ret;
+        }
+
+        let get_coord = |coord: [i32; 2], width: i32| -> [u8; 3] {
+            let idx = (coord[0] + coord[1] * width) * 4;
+            return [img_data[idx as usize], img_data[(idx+1)as usize], img_data[(idx+2) as usize]];
+        };
+
+        let base_color = get_coord(start_point, canvas.width() as i32);
+        let mut prov_vec:Vec<[i32; 2]> = Vec::new();
+        let mut searched:Vec<[i32; 2]> = Vec::new();
+        let mut search_q: Queue<[i32; 2]> = Queue::new();
+        _  = search_q.add(start_point.clone());
+
+        let mut loop_color;
+        let mut loop_color_div_acc;
+
+        while search_q.size() > 0{
+            let coord = search_q.remove().unwrap();
+            if !searched.contains(&coord){
+                searched.push(coord);
+                loop_color_div_acc = 0;
+                loop_color = get_coord(coord, canvas.width() as i32);
+                for i in 0..loop_color.len(){
+                    loop_color_div_acc += (loop_color[i] as i32 - base_color[i] as i32).abs();
                 }
-                if remove{
-                    px_removed += 1;
-                    for i in 0..3 {
-                        img_data[idx as usize + i] = 255;
+                if loop_color_div_acc < max_color_div{
+                    prov_vec.push(coord);
+                    for c in get_nearby_coords(coord){
+                        if !searched.contains(&c){
+                            _ = search_q.add(c);
+                        }
                     }
                 }
             }
         }
+        console_log!("found {} pixels", prov_vec.len());
+
+        context.rect(0f64, 0f64, canvas.width() as f64, canvas.height() as f64);
+        context.set_fill_style(&JsValue::from_str("LightCyan"));
+        context.fill();
+
+        let img = context.get_image_data(0f64, 0f64
+                                             , canvas.width() as f64, canvas.height() as f64).unwrap();
+        let mut img_data = img.data();
+
+
+        for coord in prov_vec{
+            let idx = ((coord[1] * canvas.width() as i32 + coord[0]) * 4) as usize;
+            img_data[idx] = base_color[0];
+            img_data[idx + 1] = base_color[1];
+            img_data[idx + 2] = base_color[2];
+        }
+
         let img_data = ImageData::new_with_u8_clamped_array_and_sh(Clamped(img_data.as_slice()),
-                                                                   canvas2.width(), canvas2.height()).unwrap();
-        _ = context2.put_image_data(&img_data,0.0, 0.0 );
-        console_log!("removed {px_removed} pixels?");
+                                                                   canvas.width(), canvas.height()).unwrap();
+        _ = context.put_image_data(&img_data, 0.0, 0.0 );
+        console_log!("removed pixels");
     });
     let _ = button.add_event_listener_with_callback("click", closure_btn.as_ref().unchecked_ref());
     closure_btn.forget();
@@ -98,7 +140,7 @@ pub fn draw_board(canvas:&HtmlCanvasElement, context: &CanvasRenderingContext2d)
     let _ = context.draw_image_with_html_image_element_and_dw_and_dh(&image, 0f64, 0f64, canvas.width() as f64, canvas.height() as f64);
 }
 
-/*
+
 pub fn color_counter(img:&ImageData, max_color_div:i32, min_px_per_color:u32, verbose_logging:bool ) -> i32{
     let mut colors:Vec<[u8; 3]> = Vec::new();
     let mut px_per_color:Vec<u32> = Vec::new();
@@ -158,5 +200,5 @@ pub fn color_counter(img:&ImageData, max_color_div:i32, min_px_per_color:u32, ve
     console_log!("found {} colors total", color_len);
     console_log!("found {} important colors", important_color_count);
     return important_color_count;
-}*/
+}
 

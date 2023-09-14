@@ -27,10 +27,12 @@ macro_rules! console_log {
 fn start() {
     console_error_panic_hook::set_once();
 
+    let mut prov_coords:Vec<[i32; 2]> = Vec::new();
+    prov_coords.push([388, 204]);
     console_log!("test");
     ui_init_canvas();
     ui_init_max_color_slider();
-    ui_init_canvas_test_btn();
+    ui_init_canvas_test_btn(prov_coords[0], 100);
 
 }
 
