@@ -69,10 +69,16 @@ pub fn ui_init_canvas_test_btn(start_point:[i32; 2], max_color_div:i32){
             return ret;
         }
 
-        let get_coord = |coord: [i32; 2], width: i32| -> [u8; 3] {
+        fn get_coord (coord: [i32; 2], width: i32, img_data:Clamped<Vec<u8>>) -> [u8; 3] {
             let idx = (coord[0] + coord[1] * width) * 4;
             return [img_data[idx as usize], img_data[(idx+1)as usize], img_data[(idx+2) as usize]];
         };
+
+        fn compare_colors(target:[i32; 2], compare:[i32; 2], max_div:i32) -> bool{
+            let color_div_acc = 0;
+            let color_target = get_coord(target);
+            let
+        }
 
         let base_color = get_coord(start_point, canvas.width() as i32);
         let mut prov_vec:Vec<[i32; 2]> = Vec::new();
@@ -99,11 +105,82 @@ pub fn ui_init_canvas_test_btn(start_point:[i32; 2], max_color_div:i32){
                             _ = search_q.add(c);
                         }
                     }
+
                 }
             }
         }
+        drop(search_q);
+        drop(searched);
         console_log!("found {} pixels", prov_vec.len());
 
+        console_log!("looking for edges");
+        let mut edge_provs:Vec<[i32; 2]> = Vec::new();
+        for coord in &prov_vec{
+            if !(prov_vec.contains(&[coord[0] + 1, coord[1]]) && prov_vec.contains(&[coord[0], coord[1] + 1]) &&
+                prov_vec.contains(&[coord[0] - 1, coord[1]]) && prov_vec.contains(&[coord[0], coord[1] - 1])){
+                edge_provs.push(*coord);
+            }
+        }
+        drop(prov_vec);
+
+        console_log!("sorting edges");
+        let mut count = 0;
+        let mut edge_provs_sorted:Vec<[i32; 2]> = Vec::new();
+        let edge_len = edge_provs.len();
+        edge_provs_sorted.push(edge_provs.remove(0));
+
+
+        while count < edge_len{
+            let head_coord = edge_provs_sorted[edge_provs_sorted.len()-1];
+
+            let mut check_coord = |coord| -> bool {
+                if edge_provs.contains(coord){
+                    let idx = edge_provs.iter().position(|c| {
+                        return c[0] == coord[0] && c[1] == coord[1];
+                    }).unwrap();
+                    edge_provs_sorted.push(edge_provs.remove( idx));
+                    return true;
+                }
+                return false;
+            };
+
+            let mut nearby_vec:Vec<[i32; 2]> = Vec::new();
+            nearby_vec.push([head_coord[0] + 1, head_coord[1]]);
+            nearby_vec.push([head_coord[0] - 1, head_coord[1]]);
+            nearby_vec.push([head_coord[0], head_coord[1] + 1]);
+            nearby_vec.push([head_coord[0], head_coord[1] - 1]);
+
+
+            let mut found_neighbour = false;
+            for i in 0..nearby_vec.len(){
+                if check_coord(&nearby_vec[i]){
+                    found_neighbour = true;
+                    break;
+                }
+
+            }
+
+            if !found_neighbour {
+                console_log!("could not make continues ring out of edge");
+                break;
+            }
+
+            count += 1;
+
+        }
+        console_log!("count is {}", count);
+
+        /*
+        todo put edges in order
+        todo generate type of edge per square
+        todo generate list of lines
+        todo implement distance from line to point
+        todo simplify polygon
+        todo write collision logic
+        */
+
+
+        console_log!("painting result");
         context.rect(0f64, 0f64, canvas.width() as f64, canvas.height() as f64);
         context.set_fill_style(&JsValue::from_str("LightCyan"));
         context.fill();
@@ -113,12 +190,20 @@ pub fn ui_init_canvas_test_btn(start_point:[i32; 2], max_color_div:i32){
         let mut img_data = img.data();
 
 
-        for coord in prov_vec{
+/*        for coord in prov_vec{
             let idx = ((coord[1] * canvas.width() as i32 + coord[0]) * 4) as usize;
             img_data[idx] = base_color[0];
             img_data[idx + 1] = base_color[1];
             img_data[idx + 2] = base_color[2];
         }
+*/
+
+/*        for coord in edge_provs{
+            let idx = ((coord[1] * canvas.width() as i32 + coord[0]) * 4) as usize;
+            img_data[idx] = 0;
+            img_data[idx + 1] = 0;
+            img_data[idx + 2] = 0;
+        }*/
 
         let img_data = ImageData::new_with_u8_clamped_array_and_sh(Clamped(img_data.as_slice()),
                                                                    canvas.width(), canvas.height()).unwrap();
