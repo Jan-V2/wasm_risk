@@ -3,6 +3,9 @@ use wasm_bindgen::Clamped;
 use wasm_bindgen::prelude::*;
 use web_sys::{CanvasRenderingContext2d, HtmlCanvasElement, HtmlImageElement, MouseEvent};
 use crate::element_getters::*;
+use crate::game::{Game, ProvLookupTable};
+use crate::model::Coord;
+
 extern crate queues;
 
 #[wasm_bindgen]
@@ -19,98 +22,56 @@ macro_rules! console_log {
     ($($t:tt)*) => (log(&format_args!($($t)*).to_string()))
 }
 
-pub fn ui_init_canvas(max_color_div:i32, prov_points:Vec<[i32; 2]>){
+pub fn get_map_lookup_data(max_div:u32) -> ProvLookupTable{
+    let canvas = get_canvas();
+    let context  = get_drawing_context(&canvas);
+    draw_board(&canvas, &context);
+
+    let img_data = context.get_image_data(0f64, 0f64
+                                           , canvas.width() as f64, canvas.height() as f64).unwrap().data();
+    let mut ret:Vec<[u8;3]> = Vec::new();
+    for i in (0..img_data.len()).step_by(4){
+        ret.push([img_data[i], img_data[i+1], img_data[i+2]]);
+    }
+    return ProvLookupTable{
+        pixels:ret,
+        width:canvas.width(),
+        max_div,
+    }
+}
+
+pub fn ui_init_canvas(game_model:Game){
     // inits canvas click handeler
     let canvas = get_canvas();
     let context = get_drawing_context(&canvas);
     let mut coord_array:Vec<[i32; 2]> = Vec::new();
-    let canvas_width = canvas.width() as i32;
-    let canvas_height = canvas.height() as i32;
     draw_board(&canvas, &context);
 
-    let closure2 = Closure::<dyn FnMut(_)>::new(move |event: MouseEvent| {
+    let canvas_xy_mouseover_handeler = Closure::<dyn FnMut(_)>::new(move |event: MouseEvent| {
         let label = get_html_label_by_id("xy_coord_label");
         label.set_inner_text(&format!("canvas coord x:{} y:{}", event.offset_x(), event.offset_y()));
 
     });
-    let _ = canvas.add_event_listener_with_callback("mousemove", closure2.as_ref().unchecked_ref());
-    closure2.forget();
+    let _ = canvas.add_event_listener_with_callback("mousemove", canvas_xy_mouseover_handeler.as_ref().unchecked_ref());
+    canvas_xy_mouseover_handeler.forget();
 
-    let px_color_clos = Closure::<dyn FnMut(_)>::new(move |_event: MouseEvent| {
-        let canvas2 = get_canvas();
-        let context2 = get_drawing_context(&canvas2);
-        let img_data = context2.get_image_data(0f64, 0f64
-                                               , canvas2.width() as f64, canvas2.height() as f64).unwrap().data();
+    let canvas_click_handler = Closure::<dyn FnMut(_)>::new(move |_event: MouseEvent| {
         let _canvas = get_canvas();
         let clicked_coord = [ _event.x() - _canvas.offset_left(), _event.y() - _canvas.offset_top()];
-        let array_idx = (clicked_coord[1] *  canvas2.width() as i32 + clicked_coord[0]) * 4;
 
-
-        console_log!("coord xy: {}, {} color = {}, {}, {}", clicked_coord[0], clicked_coord[1], img_data[array_idx as usize],
-            img_data[array_idx as usize + 1], img_data[array_idx as usize + 2] );
-
-        coord_array.push(clicked_coord);
-        let mut str_out:String = "[".to_string();
-        for i in 0..coord_array.len(){
-            str_out = format!("{}[{}, {}],", str_out, coord_array[i][0], coord_array[i][1]);
-        }
-        console_log!("{}]", str_out);
-
-
-        fn get_coord (coord: [i32; 2], width: i32, img_data:&Clamped<Vec<u8>>) -> [u8; 3] {
-            let idx = (coord[0] + coord[1] * width) * 4;
-            return [img_data[idx as usize], img_data[(idx+1)as usize], img_data[(idx+2) as usize]];
-        }
-
-        fn compare_colors(target:[i32; 2], compare:[i32; 2], max_div:i32, width:i32,
-                          img_data:&Clamped<Vec<u8>>) -> bool{
-            let mut color_div_acc = 0;
-            let color_target = get_coord(target, width, img_data);
-            let color_compare = get_coord(compare, width, img_data);
-            for i in 0..color_target.len(){
-                color_div_acc += (color_target[i] as i32 - color_compare[i] as i32).abs();
-            }
-            return color_div_acc < max_div;
-        }
-
-        fn dist_between_pnts(pnt1:&[i32; 2], pnt2:&[i32; 2]) -> i32{
-            sqrt((pnt1[0] - pnt2[0]).pow(2) as f64 +
-                (pnt1[1] - pnt2[1]).pow(2) as f64) as i32
-        }
-
-        let mut found_at_idx:Vec<i32> = Vec::new();
-
-        for i in 0..prov_points.len(){
-            if compare_colors(prov_points[i], clicked_coord, max_color_div,
-                              canvas_width, &img_data) {
-                found_at_idx.push(i as i32);
-            }
-        }
-
-        if found_at_idx.len() == 0{
-            console_log!("could not find color in in the array")
-
-        }else if found_at_idx.len() == 1 {
-            console_log!("found color at idx {} 1 idx found", found_at_idx[0]);
-        }else {
-            let idxes_found = found_at_idx.len();
-            let mut idx_shortest:i32 = -1;
-            let mut shortest_dist = i32::MAX;
-            for idx in found_at_idx{
-                let dist = dist_between_pnts(&clicked_coord, &prov_points[idx as usize]);
-                if dist < shortest_dist{
-                    shortest_dist = dist;
-                    idx_shortest = idx;
-                }
-            }
-            console_log!("found color at idx {} {} idxes found", idx_shortest, idxes_found);
-
-        }
+        let ret_coord = Coord{
+            x:clicked_coord[0],
+            y: clicked_coord[1],
+        };
+        game_model.handle_canvas_click(ret_coord);
 
     });
-    let _ = canvas.add_event_listener_with_callback("click", px_color_clos.as_ref().unchecked_ref());
-    px_color_clos.forget();
+    let _ = canvas.add_event_listener_with_callback("click", canvas_click_handler.as_ref().unchecked_ref());
+    canvas_click_handler.forget();
+
 }
+
+
 
 
 pub fn ui_init_canvas_test_btn(){
@@ -178,6 +139,7 @@ pub fn draw_board(canvas:&HtmlCanvasElement, context: &CanvasRenderingContext2d)
     context.fill();
     let image = get_element_by_id("board_2").dyn_into::<HtmlImageElement>()
         .map_err(|_| ()).unwrap();
-    let _ = context.draw_image_with_html_image_element_and_dw_and_dh(&image, 0f64, 0f64, canvas.width() as f64, canvas.height() as f64);
+    let _ = context.draw_image_with_html_image_element_and_dw_and_dh(&image, 0f64, 0f64,
+                                                                     canvas.width() as f64, canvas.height() as f64);
 }
 
