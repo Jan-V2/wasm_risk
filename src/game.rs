@@ -1,6 +1,8 @@
-use js_sys::Math::sqrt;
+use js_sys::Math::{sqrt};
 use wasm_bindgen::prelude::wasm_bindgen;
+use crate::element_getters::put_text_in_out_field;
 use crate::model::{Coord, Model};
+use crate::utils::rand_int;
 
 #[wasm_bindgen]
 extern "C" {
@@ -54,6 +56,7 @@ pub struct Game {
     current_state:GameState,
     model:Model,
     prov_lookup:ProvLookupTable,
+    flag_scale:f64
 }
 
 
@@ -63,8 +66,28 @@ impl Game {
             current_state: GameState::Start,
             model:Model::new_from_json(),
             prov_lookup,
+            flag_scale: 0.5,
         }
     }
+
+    pub fn setup_ui(&self){
+        crate::ui::ui_init_max_color_slider();
+        crate::canvas::ui_init_canvas_test_btn();
+    }
+
+    pub fn draw_board(&mut self){
+        let player_count = 4;
+        self.model.test_add_players(player_count);
+        for i in 0..self.model.provinces.len(){
+            let idx = rand_int(0, player_count as u32 + 1) as i32;
+            if idx < player_count{
+                self.model.provinces[i].owner_id = idx as u32
+            }
+        }
+        crate::canvas::redraw_board_state(&self.model, self.flag_scale);
+    }
+
+
 
     pub fn handle_canvas_click(&self, clicked_coord :Coord){
 
@@ -77,10 +100,16 @@ impl Game {
         }
 
         if found_at_idx.len() == 0{
-            console_log!("could not find color in in the array")
+            let str_out = "found nothing".to_string();
+            put_text_in_out_field(str_out.clone());
+            //console_log!(str_out)
 
         }else if found_at_idx.len() == 1 {
-            console_log!("found color at idx {} 1 idx found", found_at_idx[0]);
+            let prov = &self.model.provinces[found_at_idx[0] as usize];
+            let str_out = format!("found {} on continent {}", prov.name, prov.continent);
+            put_text_in_out_field(str_out.clone());
+            //console_log!("{}", str_out);
+
         }else {
             let idxes_found = found_at_idx.len();
             let mut idx_shortest:i32 = -1;
@@ -93,10 +122,10 @@ impl Game {
                     idx_shortest = idx;
                 }
             }
-            console_log!("found color at idx {} {} idxes found", idx_shortest, idxes_found);
-
+            let prov = &self.model.provinces[idx_shortest as usize];
+            let str_out = format!("found {} on continent {}", prov.name, prov.continent);
+            put_text_in_out_field(str_out.clone());
+            //console_log!("{}", str_out);
         }
-
-
     }
 }

@@ -1,9 +1,7 @@
 use wasm_bindgen::closure::Closure;
 use wasm_bindgen::JsCast;
-use wasm_bindgen::prelude::wasm_bindgen;
 use web_sys::MouseEvent;
 use crate::element_getters::{get_html_input_by_id, get_html_label_by_id};
-use crate::model::Coord;
 
 
 

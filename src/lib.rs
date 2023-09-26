@@ -3,14 +3,13 @@ mod canvas;
 mod ui;
 mod model;
 mod game;
+mod utils;
+mod map_data;
 
 use wasm_bindgen::prelude::*;
-use crate::canvas::{get_map_lookup_data, ui_init_canvas, ui_init_canvas_test_btn};
-use crate::ui::ui_init_max_color_slider;
-use reqwest;
-use serde_json::json;
+use crate::canvas::{get_map_lookup_data};
 use crate::game::Game;
-use crate::model::{Coord, get_map_data,  prov_array_from_json, prov_array_to_json, Province};
+use crate::model::{new_prov_array_to_json, NewProvince, prov_array_from_json};
 
 // todo figure out how to export this from a module
 #[wasm_bindgen]
@@ -27,6 +26,13 @@ macro_rules! console_log {
     ($($t:tt)*) => (log(&format_args!($($t)*).to_string()))
 }
 
+// todo add cards to provs
+// todo fix gap in prov
+// todo add names to provs
+// todo add player colors to prov flags
+// todo make flags flash when prov is selected?
+// this would probably involve some bullshit with .setTimeout
+
 #[wasm_bindgen(start)]
 fn start() {
     console_error_panic_hook::set_once();
@@ -34,15 +40,23 @@ fn start() {
     let mut prov_coords:Vec<[i32; 2]> = Vec::new();
     prov_coords.push([388, 204]);
     console_log!("test");
-    let game = Game::new(get_map_lookup_data(50));
+    let mut game = Game::new(get_map_lookup_data(50));
 
-    ui_init_canvas(game);
-    ui_init_max_color_slider();
-    ui_init_canvas_test_btn();
+    game.setup_ui();
+    game.draw_board();
 
-    // todo make a slection box, that has all the enum in it, so i can assign continents to provs
+    // this has to be done from the outer scope, because a ref can't go into a closure.
+    crate::canvas::ui_init_canvas(game);
 }
 
+
+fn update_prov_data(){
+    let mut new_provs:Vec<NewProvince> = Vec::new();
+    for prov in prov_array_from_json(){
+        new_provs.push(NewProvince::from_prov(&prov))
+    }
+    new_prov_array_to_json(&new_provs);
+}
 
 
 
