@@ -3,7 +3,7 @@ use std::fmt::Formatter;
 use serde::{Deserialize, Serialize};
 use wasm_bindgen::prelude::wasm_bindgen;
 use web_sys::{HtmlCanvasElement, MouseEvent};
-use crate::map_data::get_map_data;
+use crate::data_include::{get_colors_array, get_map_data};
 
 
 #[wasm_bindgen]
@@ -36,9 +36,9 @@ impl Model{
     }
 
     pub fn test_add_players(&mut self, count:i32){
-        let colors = ["CadetBlue", "DarkOrchid", "DarkKhaki", "LimeGreen", "OrangeRed", "PeachPuff"];
+        let colors = get_colors_array();
         for i in 0..count{
-            self.players.push(Player::new(i as u32, colors[i as usize].to_string()));
+            self.players.push(Player::new(i as u32, colors[i as usize].to_string(), false));
         }
     }
 }
@@ -100,7 +100,7 @@ impl fmt::Display for Continent{
 
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
-pub enum Card{
+pub enum TerritoryCardType {
     Infantry,
     Artillery,
     Cavalry
@@ -114,7 +114,7 @@ pub struct Province{
     pub owner_id:u32,
     pub location:Coord,
     pub continent:Continent,
-    pub card_type:Card,
+    pub card_type: TerritoryCardType,
 }
 
 impl Province{
@@ -126,7 +126,7 @@ impl Province{
             owner_id: 100,
             location:Coord::new(x, y),
             continent:Continent::Africa,
-            card_type: Card::Infantry,
+            card_type: TerritoryCardType::Infantry,
         }
     }
 }
@@ -140,7 +140,7 @@ pub struct NewProvince{
     pub army_count:u32,
     pub location:Coord,
     pub continent:Continent,
-    pub card_type:Card,
+    pub card_type: TerritoryCardType,
 }
 
 impl NewProvince{
@@ -161,16 +161,18 @@ impl NewProvince{
 
 pub struct Player{
     pub id:u32,
-    pub cards:Vec<Card>,
+    pub cards:Vec<TerritoryCardType>,
     pub color:String,
+    pub is_computer:bool,
 }
 
 impl Player {
-    fn new(id:u32, color:String) -> Player{
-        return Player {
+    fn new(id:u32, color:String, is_computer:bool) -> Player{
+        return Player{
             id,
             cards: vec![],
             color,
+            is_computer,
         }
     }
 

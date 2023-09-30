@@ -21,7 +21,6 @@ macro_rules! console_log {
 enum GameState {
     Start,
     Setup,
-
 }
 
 pub struct ProvLookupTable {

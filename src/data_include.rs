@@ -22,7 +22,7 @@ pub fn get_map_data() -> String {
       "y": 62
     },
     "continent": "NAmerica",
-    "card_type": "Infantry"
+    "card_type": "Artillery"
   },
   {
     "name": "Alberta",
@@ -34,7 +34,7 @@ pub fn get_map_data() -> String {
       "y": 92
     },
     "continent": "NAmerica",
-    "card_type": "Infantry"
+    "card_type": "Cavalry"
   },
   {
     "name": "Ontario",
@@ -46,7 +46,7 @@ pub fn get_map_data() -> String {
       "y": 97
     },
     "continent": "NAmerica",
-    "card_type": "Infantry"
+    "card_type": "Cavalry"
   },
   {
     "name": "Quebec",
@@ -58,7 +58,7 @@ pub fn get_map_data() -> String {
       "y": 92
     },
     "continent": "NAmerica",
-    "card_type": "Infantry"
+    "card_type": "Cavalry"
   },
   {
     "name": "Greenland",
@@ -70,7 +70,7 @@ pub fn get_map_data() -> String {
       "y": 34
     },
     "continent": "NAmerica",
-    "card_type": "Infantry"
+    "card_type": "Cavalry"
   },
   {
     "name": "Western United States",
@@ -82,7 +82,7 @@ pub fn get_map_data() -> String {
       "y": 127
     },
     "continent": "NAmerica",
-    "card_type": "Infantry"
+    "card_type": "Artillery"
   },
   {
     "name": "Eastern United States",
@@ -94,7 +94,7 @@ pub fn get_map_data() -> String {
       "y": 151
     },
     "continent": "NAmerica",
-    "card_type": "Infantry"
+    "card_type": "Artillery"
   },
   {
     "name": "Central America",
@@ -106,7 +106,7 @@ pub fn get_map_data() -> String {
       "y": 191
     },
     "continent": "NAmerica",
-    "card_type": "Infantry"
+    "card_type": "Artillery"
   },
   {
     "name": "Venezuela",
@@ -130,7 +130,7 @@ pub fn get_map_data() -> String {
       "y": 301
     },
     "continent": "SAmerica",
-    "card_type": "Infantry"
+    "card_type": "Artillery"
   },
   {
     "name": "Peru",
@@ -166,7 +166,7 @@ pub fn get_map_data() -> String {
       "y": 195
     },
     "continent": "Africa",
-    "card_type": "Infantry"
+    "card_type": "Cavalry"
   },
   {
     "name": "Egypt",
@@ -214,7 +214,7 @@ pub fn get_map_data() -> String {
       "y": 340
     },
     "continent": "Africa",
-    "card_type": "Infantry"
+    "card_type": "Artillery"
   },
   {
     "name": "Madagascar",
@@ -226,7 +226,7 @@ pub fn get_map_data() -> String {
       "y": 343
     },
     "continent": "Africa",
-    "card_type": "Infantry"
+    "card_type": "Cavalry"
   },
   {
     "name": "Iceland",
@@ -250,7 +250,7 @@ pub fn get_map_data() -> String {
       "y": 95
     },
     "continent": "Europe",
-    "card_type": "Infantry"
+    "card_type": "Artillery"
   },
   {
     "name": "Scandinavia",
@@ -262,7 +262,7 @@ pub fn get_map_data() -> String {
       "y": 69
     },
     "continent": "Europe",
-    "card_type": "Infantry"
+    "card_type": "Cavalry"
   },
   {
     "name": "Central Europe",
@@ -274,7 +274,7 @@ pub fn get_map_data() -> String {
       "y": 101
     },
     "continent": "Europe",
-    "card_type": "Infantry"
+    "card_type": "Cavalry"
   },
   {
     "name": "Eastern Europe",
@@ -286,7 +286,7 @@ pub fn get_map_data() -> String {
       "y": 81
     },
     "continent": "Europe",
-    "card_type": "Infantry"
+    "card_type": "Cavalry"
   },
   {
     "name": "Southern Europe",
@@ -298,7 +298,7 @@ pub fn get_map_data() -> String {
       "y": 126
     },
     "continent": "Europe",
-    "card_type": "Infantry"
+    "card_type": "Artillery"
   },
   {
     "name": "Western Europe",
@@ -310,7 +310,7 @@ pub fn get_map_data() -> String {
       "y": 115
     },
     "continent": "Europe",
-    "card_type": "Infantry"
+    "card_type": "Artillery"
   },
   {
     "name": "Middle East",
@@ -334,7 +334,7 @@ pub fn get_map_data() -> String {
       "y": 117
     },
     "continent": "Asia",
-    "card_type": "Infantry"
+    "card_type": "Cavalry"
   },
   {
     "name": "Ural",
@@ -346,7 +346,7 @@ pub fn get_map_data() -> String {
       "y": 74
     },
     "continent": "Asia",
-    "card_type": "Infantry"
+    "card_type": "Cavalry"
   },
   {
     "name": "Siberia",
@@ -358,7 +358,7 @@ pub fn get_map_data() -> String {
       "y": 51
     },
     "continent": "Asia",
-    "card_type": "Infantry"
+    "card_type": "Cavalry"
   },
   {
     "name": "Yakutsk",
@@ -370,7 +370,7 @@ pub fn get_map_data() -> String {
       "y": 61
     },
     "continent": "Asia",
-    "card_type": "Infantry"
+    "card_type": "Cavalry"
   },
   {
     "name": "Kamchatka",
@@ -394,7 +394,7 @@ pub fn get_map_data() -> String {
       "y": 149
     },
     "continent": "Asia",
-    "card_type": "Infantry"
+    "card_type": "Artillery"
   },
   {
     "name": "Mongolia",
@@ -430,7 +430,7 @@ pub fn get_map_data() -> String {
       "y": 191
     },
     "continent": "Asia",
-    "card_type": "Infantry"
+    "card_type": "Cavalry"
   },
   {
     "name": "Irkutsk",
@@ -442,7 +442,7 @@ pub fn get_map_data() -> String {
       "y": 86
     },
     "continent": "Asia",
-    "card_type": "Infantry"
+    "card_type": "Cavalry"
   },
   {
     "name": "Southeast Asia",
@@ -466,7 +466,7 @@ pub fn get_map_data() -> String {
       "y": 280
     },
     "continent": "Australia",
-    "card_type": "Infantry"
+    "card_type": "Artillery"
   },
   {
     "name": "New Guinea",
@@ -490,7 +490,7 @@ pub fn get_map_data() -> String {
       "y": 375
     },
     "continent": "Australia",
-    "card_type": "Infantry"
+    "card_type": "Artillery"
   },
   {
     "name": "Eastern Australia",
@@ -502,8 +502,70 @@ pub fn get_map_data() -> String {
       "y": 360
     },
     "continent": "Australia",
-    "card_type": "Infantry"
+    "card_type": "Artillery"
   }
 ]"#;
     return data.to_string();
+}
+
+
+pub fn get_setup_player_select() -> String{
+    // todo format
+    let data = r#"        <label id="side_menu_header" >Setup</label>
+        <div id="side_menu_inner">
+        <select class="form-select" style="width: fit-content">
+            <option>Choose the number of players</option>
+            <option value="1">1</option>
+            <option value="2">2</option>
+            <option value="3">3</option>
+            <option value="4">4</option>
+            <option value="5">5</option>
+            <option value="6">6</option>
+        </select>
+        </div>
+"#;
+
+    return data.to_string()
+}
+
+
+pub fn get_side_menu_setup_footer() -> String{
+    let data = r#"        <div id="side_menu_setup_footer">
+            <button id="next_btn" type="button" class="btn btn-primary" style="margin-top: 10px; margin-bottom: 5px;">
+                Next
+            </button>
+            <div id="side_menu_error">
+                You must select an amount of players to continue.
+            </div>
+        </div>
+    </div>"#;
+
+    return data.to_string()
+}
+
+pub fn get_player_setup(color_array:&Vec<String>, player_num:&u32) -> String{
+    let mut out:String = "".to_string();
+
+    for color in color_array{
+        out = format!(r#"{out} <option value='#{color}'>{color}</option>"#);
+    }
+
+    out = format!(r#"            <label>Player {player_num}</label>
+            <select class="form-select" style="width: fit-content">
+                <option>Choose color</option>
+                {out}
+            </select>
+            <input type="checkbox" id="player_{player_num}_is_ai" value="is_ai">
+            <label for="player_{player_num}_is_ai"> Is AI</label><br>"#, );
+
+
+    return out;
+    /*return format!( r#"        <div id="setup_player_config">
+    {}
+        </div>"#, );*/
+
+}
+
+pub fn get_colors_array() -> [&'static str; 6] {
+    ["CadetBlue", "DarkOrchid", "DarkKhaki", "LimeGreen", "OrangeRed", "PeachPuff"]
 }

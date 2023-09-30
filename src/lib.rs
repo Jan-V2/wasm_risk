@@ -4,12 +4,17 @@ mod ui;
 mod model;
 mod game;
 mod utils;
-mod map_data;
+mod data_include;
+mod syca;
 
 use wasm_bindgen::prelude::*;
 use crate::canvas::{get_map_lookup_data};
 use crate::game::Game;
 use crate::model::{new_prov_array_to_json, NewProvince, prov_array_from_json};
+
+use sycamore;
+use web_sys::Node;
+use crate::element_getters::get_element_by_id;
 
 // todo figure out how to export this from a module
 #[wasm_bindgen]
@@ -26,12 +31,24 @@ macro_rules! console_log {
     ($($t:tt)*) => (log(&format_args!($($t)*).to_string()))
 }
 
-// todo add cards to provs
-// todo fix gap in prov
-// todo add names to provs
-// todo add player colors to prov flags
-// todo make flags flash when prov is selected?
+// todo ui for game setup
+// todo show prov name on mouse over
+// todo printout div
+// todo province selecting
+// todo make navigation tree editor
+// todo create nav tree
+// todo make flag flash when prov is selected?
 // this would probably involve some bullshit with .setTimeout
+// todo battle ui (on the right of the screen probably)
+// todo 3d dice
+// todo basic ai
+// todo mission cards
+
+
+
+fn test_scoping(test:String){
+    console_log!("{test}");
+}
 
 #[wasm_bindgen(start)]
 fn start() {
@@ -47,6 +64,11 @@ fn start() {
 
     // this has to be done from the outer scope, because a ref can't go into a closure.
     crate::canvas::ui_init_canvas(game);
+
+    let test = get_element_by_id("main");
+    sycamore::render_to(syca::TestApp, &test);
+
+
 }
 
 

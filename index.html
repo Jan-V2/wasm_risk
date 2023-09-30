@@ -1,21 +1,35 @@
 <html>
-  <head>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet"
+      integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"
+        integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL"
+        crossorigin="anonymous"></script>
+<head>
     <meta content="text/html;charset=utf-8" http-equiv="Content-Type"/>
-  </head>
-  <body>
-    <img src="/risk_board_1.png" hidden="hidden" id="board_1">
-    <img src="/risk_board_2.png" hidden="hidden" id="board_2">
-    <canvas id="canvas" height="480" width="854"></canvas>
-    <div></div>
-    <label id="xy_coord_label">canvas coord </label>
-    <div></div>
-    <button id="nuke_btn">press for test</button>
+</head>
+<body>
+<img src="/risk_board_1.png" hidden="hidden" id="board_1">
+<img src="/risk_board_2.png" hidden="hidden" id="board_2">
+<div class="row mb-3">
+    <div class="col-md-1"></div>
+    <div class="col-md-7" style="background-color: beige">
+        <canvas id="canvas" height="480" width="854"></canvas>
+        <div></div>
+        <label id="xy_coord_label">canvas coord </label>
+        <div></div>
+        <button id="nuke_btn">press for test</button>
 
 
-    <div class="slidecontainer">
-      <input type="range" min="0" max="255" value="50" class="slider" id="range">
-      <label id="range_label">50</label>
+        <div class="slidecontainer">
+            <input type="range" min="0" max="255" value="50" class="slider" id="range">
+            <label id="range_label">50</label>
+        </div>
+        <label id="text_out"></label>
     </div>
-  <label id="text_out"></label>
-  </body>
+    <div id="side_menu" class="col-md-4 " style="background-color: azure">
+        <div id="main"></div>
+
+    </div>
+</div>
+</body>
 </html>
