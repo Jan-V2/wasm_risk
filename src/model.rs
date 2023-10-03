@@ -3,7 +3,7 @@ use std::fmt::Formatter;
 use serde::{Deserialize, Serialize};
 use wasm_bindgen::prelude::wasm_bindgen;
 use web_sys::{HtmlCanvasElement, MouseEvent};
-use crate::data_include::{get_colors_array, get_map_data};
+use crate::data_include::{get_colors_array, get_map_data, get_navtree_data};
 
 
 #[wasm_bindgen]
@@ -24,13 +24,15 @@ macro_rules! console_log {
 
 pub struct Model{
     pub provinces:Vec<Province>,
+    pub nav_tree:NavTree,
     pub players:Vec<Player>,
 }
 
 impl Model{
     pub fn new_from_json() -> Model{
         return Model{
-            provinces: prov_array_from_json(),
+            provinces:serde_json::from_str(&get_map_data()).unwrap(),
+            nav_tree: serde_json::from_str(&get_navtree_data()).unwrap(),
             players: vec![],
         }
     }
@@ -131,6 +133,118 @@ impl Province{
     }
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+pub struct NavNode{
+    id:u32,
+    connections:Vec<u32>,
+}
+
+impl NavNode {
+    pub fn new(id:u32)->NavNode{
+        NavNode{
+            id,
+            connections: vec![],
+        }
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct NavTree{
+    nav_nodes:Vec<NavNode>,
+    pub adding_id_set:bool,
+    adding_to:u32,
+}
+
+impl NavTree {
+    pub fn new()->NavTree{
+        NavTree{
+            nav_nodes: vec![],
+            adding_id_set: false,
+            adding_to: 0,
+        }
+    }
+    
+    pub fn navigate_adjacent(&self, from:u32, to:u32) -> Option<bool>{
+        for node in &self.nav_nodes{
+            if node.id == from{
+                return Some(node.connections.contains(&to));
+            }
+        }
+        None
+    }
+
+    #[allow(unused_variables)]
+    pub fn navigate_move(&self, from:u32, to:u32, provs:&Vec<Province>) -> bool{
+        todo!("impl dykstra and check if provs are owned by same person");
+    }
+
+    pub fn add_node(&mut self, id:u32){
+        if self.adding_id_set{
+            gloo::console::log!(format!("already adding to id {}", self.adding_to ));
+            return;
+        }
+        for node in &self.nav_nodes{
+            if node.id == id{
+                gloo::console::log!(" can't add node is already in list");
+                return;
+            }
+        }
+        self.nav_nodes.push(NavNode::new(id));
+        self.adding_id_set = true;
+        self.adding_to = id;
+        gloo::console::log!("added new node")
+    }
+
+    pub fn add_connection(&mut self, dest:u32){
+        if self.adding_to == dest {
+            gloo::console::log!("add failed to and from are the same");
+            return;
+        }
+        if !(self.adding_id_set) {
+            gloo::console::log!("adding id not set");
+            return;
+        }
+        for node in  &mut self.nav_nodes{
+            if node.id == self.adding_to{
+                if !node.connections.contains(&dest){
+                    node.connections.push(dest);
+                    gloo::console::log!(format!("added path from {} to {}", self.adding_to, dest));
+                    return;
+                }else {
+                    gloo::console::log!("dest is already in node");
+                }
+            }
+        }
+        gloo::console::log!(format!("add failed could not find id {} in nav tree", self.adding_to))
+    }
+
+    pub fn verify_self(&self){
+        let get_node = |id:&u32|{
+            for node in &self.nav_nodes{
+                if node.id == *id{
+                    return Some(node);
+                }
+            }
+            None
+        };
+
+        for node in &self.nav_nodes{
+            for id in &node.connections{
+                if !get_node(id).unwrap().connections.contains(&node.id){
+                    gloo::console::log!(format!("node {} is missing connections", node.id));
+                    return;
+                }
+            }
+        }
+        gloo::console::log!("success")
+    }
+
+    pub fn end_add(&mut self){
+        self.adding_id_set = false;
+        gloo::console::log!(format!("finished adding to {}", self.adding_to))
+    }
+
+}
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct NewProvince{
@@ -141,6 +255,7 @@ pub struct NewProvince{
     pub location:Coord,
     pub continent:Continent,
     pub card_type: TerritoryCardType,
+    pub connections:Vec<u32>,
 }
 
 impl NewProvince{
@@ -153,6 +268,7 @@ impl NewProvince{
             location: p.location.clone(),
             continent: p.continent.clone(),
             card_type: p.card_type.clone(),
+            connections: vec![],
         }
     }
 }

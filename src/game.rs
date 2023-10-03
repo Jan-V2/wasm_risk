@@ -1,22 +1,10 @@
 use js_sys::Math::{sqrt};
-use wasm_bindgen::prelude::wasm_bindgen;
 use crate::element_getters::put_text_in_out_field;
-use crate::model::{Coord, Model};
+use crate::model::{Coord, Model, Player};
+use crate::ui_player_setup::PlayerConfig;
 use crate::utils::rand_int;
 
-#[wasm_bindgen]
-extern "C" {
-    // Use `js_namespace` here to bind `console.log(..)` instead of just
-    // `log(..)`
-    #[wasm_bindgen(js_namespace = console)]
-    fn log(s: &str);
-}
 
-macro_rules! console_log {
-    // Note that this is using the `log` function imported above during
-    // `bare_bones`
-    ($($t:tt)*) => (log(&format_args!($($t)*).to_string()))
-}
 
 enum GameState {
     Start,
@@ -69,27 +57,64 @@ impl Game {
         }
     }
 
-    pub fn setup_ui(&self){
-        crate::ui::ui_init_max_color_slider();
-        crate::canvas::ui_init_canvas_test_btn();
-    }
 
-    pub fn draw_board(&mut self){
-        let player_count = 4;
-        self.model.test_add_players(player_count);
+    fn assign_provs_random(&mut self){
+        let player_count = self.model.players.len() as i32;
         for i in 0..self.model.provinces.len(){
             let idx = rand_int(0, player_count as u32 + 1) as i32;
             if idx < player_count{
                 self.model.provinces[i].owner_id = idx as u32
             }
         }
-        crate::canvas::redraw_board_state(&self.model, self.flag_scale);
     }
 
+    pub fn draw_board(&self){
+        if self.model.players.len() > 0 {
+            crate::canvas::redraw_board_state(&self.model, self.flag_scale, true);
+        }else {
+            crate::canvas::redraw_board_state(&self.model, self.flag_scale, false);
+        }
+    }
 
+    pub fn set_player_config(&mut self, config:PlayerConfig){
+        for i in 0..config.player_count{
+            self.model.players.push(Player{
+                id: i as u32,
+                cards: vec![],
+                color: config.player_colors[i as usize].clone(),
+                is_computer: config.player_is_ai[i as usize],
+            })
+        }
+        self.assign_provs_random();
+        self.draw_board();
+    }
 
-    pub fn handle_canvas_click(&self, clicked_coord :Coord){
+    #[allow(unused_variables)]
+    pub fn lookup_prov_id(&self, prov_id:u32){
+        todo!()
+    }
 
+    pub fn get_prov_location_string(&self, coord:&Coord) ->Option<String>{
+        let prov_id = self.lookup_coord(coord);
+        if prov_id.is_some(){
+            let prov = &self.model.provinces[prov_id.unwrap() as usize];
+            return Some( format!("found {} on continent {}", prov.name, prov.continent));
+        }else {
+            return None
+        }
+    }
+
+    pub fn get_prov_mouseover_string(&self, coord:&Coord) -> Option<String>{
+        let prov_id = self.lookup_coord(coord);
+        if prov_id.is_some(){
+            let prov = &self.model.provinces[prov_id.unwrap() as usize];
+            return Some( prov.name.clone());
+        }else {
+            return None
+        }
+    }
+
+    pub fn lookup_coord(&self, clicked_coord:&Coord)-> Option<u32>{
         let mut found_at_idx:Vec<i32> = Vec::new();
 
         for i in 0..self.model.provinces.len(){
@@ -99,32 +124,53 @@ impl Game {
         }
 
         if found_at_idx.len() == 0{
-            let str_out = "found nothing".to_string();
-            put_text_in_out_field(str_out.clone());
-            //console_log!(str_out)
-
+            None
         }else if found_at_idx.len() == 1 {
-            let prov = &self.model.provinces[found_at_idx[0] as usize];
-            let str_out = format!("found {} on continent {}", prov.name, prov.continent);
-            put_text_in_out_field(str_out.clone());
-            //console_log!("{}", str_out);
-
+            Some(found_at_idx[0] as u32)
         }else {
-            let idxes_found = found_at_idx.len();
-            let mut idx_shortest:i32 = -1;
+            let mut idx_shortest: i32 = -1;
             let mut shortest_dist = i32::MAX;
-            for idx in found_at_idx{
+            for idx in found_at_idx {
                 let dist = ProvLookupTable::dist_between_pnts(&clicked_coord,
                                                               &self.model.provinces[idx as usize].location);
-                if dist < shortest_dist{
+                if dist < shortest_dist {
                     shortest_dist = dist;
                     idx_shortest = idx;
                 }
             }
-            let prov = &self.model.provinces[idx_shortest as usize];
-            let str_out = format!("found {} on continent {}", prov.name, prov.continent);
-            put_text_in_out_field(str_out.clone());
-            //console_log!("{}", str_out);
+            Some(idx_shortest as u32)
         }
     }
+
+    pub fn handle_canvas_click(&mut self, clicked_coord :Coord){
+        let prov_str = self.get_prov_location_string(&clicked_coord);
+        if prov_str.is_some(){
+            put_text_in_out_field(prov_str.unwrap());
+        }else{
+            put_text_in_out_field("".to_owned());
+        }
+
+        let prov_id = self.lookup_coord(&clicked_coord);
+        if prov_id.is_some(){
+            if !self.model.nav_tree.adding_id_set{
+                self.model.nav_tree.add_node(prov_id.unwrap());
+            }else{
+                self.model.nav_tree.add_connection(prov_id.unwrap());
+            }
+        }
+    }
+
+    pub fn nav_tree_end_add(&mut self){
+        self.model.nav_tree.end_add();
+    }
+
+    pub fn nav_tree_dump(&self){
+        gloo::console::log!("dumping");
+        gloo::console::log!(serde_json::to_string(&self.model.nav_tree).unwrap());
+    }
+
+    pub fn nav_tree_check(&self){
+        self.model.nav_tree.verify_self();
+    }
+
 }

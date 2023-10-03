@@ -1,3 +1,5 @@
+use std::cell::RefCell;
+use std::rc::Rc;
 use wasm_bindgen::prelude::*;
 use web_sys::{CanvasRenderingContext2d, HtmlCanvasElement, HtmlImageElement, MouseEvent};
 use crate::element_getters::*;
@@ -6,19 +8,6 @@ use crate::model::{Coord, Model, Province};
 
 extern crate queues;
 
-#[wasm_bindgen]
-extern "C" {
-    // Use `js_namespace` here to bind `console.log(..)` instead of just
-    // `log(..)`
-    #[wasm_bindgen(js_namespace = console)]
-    fn log(s: &str);
-}
-/*
-macro_rules! console_log {
-    // Note that this is using the `log` function imported above during
-    // `bare_bones`
-    ($($t:tt)*) => (log(&format_args!($($t)*).to_string()))
-}*/
 
 pub fn get_map_lookup_data(max_div: u32) -> ProvLookupTable {
     let canvas = get_canvas();
@@ -38,13 +27,35 @@ pub fn get_map_lookup_data(max_div: u32) -> ProvLookupTable {
     };
 }
 
-pub fn ui_init_canvas(game_model: Game) {
+pub fn ui_init_canvas(game_model: Rc<RefCell<Game>>) {
     // inits canvas click handeler
     let canvas = get_canvas();
+    let game_model_clone = game_model.clone();
 
     let canvas_xy_mouseover_handeler = Closure::<dyn FnMut(_)>::new(move |event: MouseEvent| {
         let label = get_html_label_by_id("xy_coord_label");
         label.set_inner_text(&format!("canvas coord x:{} y:{}", event.offset_x(), event.offset_y()));
+
+        let text = game_model_clone.as_ref().borrow().get_prov_mouseover_string(&Coord{
+            x: event.offset_x(),
+            y: event.offset_y(),
+        });
+        game_model_clone.as_ref().borrow().draw_board();
+
+        if text.is_some(){
+            let canvas = get_canvas();
+            let ct = get_drawing_context(&canvas);
+
+            let point_size = 13f64;
+            let font_str = format!("bold {}px serif", (point_size ) as i32);
+            ct.set_fill_style(&JsValue::from_str("black"));
+            ct.set_font(&font_str);
+            ct.set_text_align("right");
+
+            let _ = ct.fill_text(text.unwrap().as_str(), event.offset_x() as f64, event.offset_y() as f64);
+        }
+
+
     });
     let _ = canvas.add_event_listener_with_callback("mousemove", canvas_xy_mouseover_handeler.as_ref().unchecked_ref());
     canvas_xy_mouseover_handeler.forget();
@@ -57,74 +68,20 @@ pub fn ui_init_canvas(game_model: Game) {
             x: clicked_coord[0],
             y: clicked_coord[1],
         };
-        game_model.handle_canvas_click(ret_coord);
+
+        game_model.as_ref().borrow_mut().handle_canvas_click(ret_coord);
     });
     let _ = canvas.add_event_listener_with_callback("click", canvas_click_handler.as_ref().unchecked_ref());
     canvas_click_handler.forget();
 }
 
 
-pub fn ui_init_canvas_test_btn() {
-    // inits click for test button
-
-    /*let button = get_button_by_id("nuke_btn");
-    let closure_btn = Closure::<dyn FnMut(_)>::new(move |_event: MouseEvent| {
-        console_log!("removing pixels");
-
-        let canvas = get_canvas();
-        let context = get_drawing_context(&canvas);
-        let img = context.get_image_data(0f64, 0f64
-                                         , canvas.width() as f64, canvas.height() as f64).unwrap();
-        let img_data = img.data();
-
-
-        fn get_nearby_coords(point:[i32; 2]) -> Vec<[i32; 2]> {
-            let mut ret:Vec<[i32; 2]> = Vec::new();
-            ret.push([point[0] + 1, point[1]]);
-            ret.push([point[0] - 1, point[1]]);
-            ret.push([point[0], point[1] + 1]);
-            ret.push([point[0], point[1] - 1]);
-            return ret;
-        }
-
-        console_log!("painting result");
-        context.rect(0f64, 0f64, canvas.width() as f64, canvas.height() as f64);
-        context.set_fill_style(&JsValue::from_str("LightCyan"));
-        context.fill();
-
-        let img = context.get_image_data(0f64, 0f64
-                                             , canvas.width() as f64, canvas.height() as f64).unwrap();
-        let mut img_data = img.data();
-
-
-/*        for coord in prov_vec{
-            let idx = ((coord[1] * canvas.width() as i32 + coord[0]) * 4) as usize;
-            img_data[idx] = base_color[0];
-            img_data[idx + 1] = base_color[1];
-            img_data[idx + 2] = base_color[2];
-        }
-*/
-
-/*        for coord in edge_provs{
-            let idx = ((coord[1] * canvas.width() as i32 + coord[0]) * 4) as usize;
-            img_data[idx] = 0;
-            img_data[idx + 1] = 0;
-            img_data[idx + 2] = 0;
-        }*/
-
-        let img_data = ImageData::new_with_u8_clamped_array_and_sh(Clamped(img_data.as_slice()),
-                                                                   canvas.width(), canvas.height()).unwrap();
-        _ = context.put_image_data(&img_data, 0.0, 0.0 );
-        console_log!("removed pixels");
-    });
-    let _ = button.add_event_listener_with_callback("click", closure_btn.as_ref().unchecked_ref());
-    closure_btn.forget();*/
-}
-
-pub fn redraw_board_state(model: &Model, scale: f64){
+pub fn redraw_board_state(model: &Model, scale: f64, draw_flags:bool){
     draw_board();
-    draw_all_flags(&model, scale);
-    draw_all_army_count(&model.provinces, scale);
+    if draw_flags{
+        draw_all_flags(&model, scale);
+        draw_all_army_count(&model.provinces, scale);
+    }
 }
 
 

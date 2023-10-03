@@ -508,62 +508,393 @@ pub fn get_map_data() -> String {
     return data.to_string();
 }
 
-
-pub fn get_setup_player_select() -> String{
-    // todo format
-    let data = r#"        <label id="side_menu_header" >Setup</label>
-        <div id="side_menu_inner">
-        <select class="form-select" style="width: fit-content">
-            <option>Choose the number of players</option>
-            <option value="1">1</option>
-            <option value="2">2</option>
-            <option value="3">3</option>
-            <option value="4">4</option>
-            <option value="5">5</option>
-            <option value="6">6</option>
-        </select>
-        </div>
-"#;
-
-    return data.to_string()
-}
-
-
-pub fn get_side_menu_setup_footer() -> String{
-    let data = r#"        <div id="side_menu_setup_footer">
-            <button id="next_btn" type="button" class="btn btn-primary" style="margin-top: 10px; margin-bottom: 5px;">
-                Next
-            </button>
-            <div id="side_menu_error">
-                You must select an amount of players to continue.
-            </div>
-        </div>
-    </div>"#;
-
-    return data.to_string()
-}
-
-pub fn get_player_setup(color_array:&Vec<String>, player_num:&u32) -> String{
-    let mut out:String = "".to_string();
-
-    for color in color_array{
-        out = format!(r#"{out} <option value='#{color}'>{color}</option>"#);
-    }
-
-    out = format!(r#"            <label>Player {player_num}</label>
-            <select class="form-select" style="width: fit-content">
-                <option>Choose color</option>
-                {out}
-            </select>
-            <input type="checkbox" id="player_{player_num}_is_ai" value="is_ai">
-            <label for="player_{player_num}_is_ai"> Is AI</label><br>"#, );
-
-
-    return out;
-    /*return format!( r#"        <div id="setup_player_config">
-    {}
-        </div>"#, );*/
-
+pub fn get_navtree_data() ->String{
+    let data = r#"
+    {
+    "nav_nodes": [
+        {
+            "id": 11,
+            "connections": [
+                12,
+                10,
+                9
+            ]
+        },
+        {
+            "id": 12,
+            "connections": [
+                11,
+                10
+            ]
+        },
+        {
+            "id": 10,
+            "connections": [
+                9,
+                11,
+                12,
+                13
+            ]
+        },
+        {
+            "id": 9,
+            "connections": [
+                11,
+                10,
+                8
+            ]
+        },
+        {
+            "id": 8,
+            "connections": [
+                6,
+                7,
+                9
+            ]
+        },
+        {
+            "id": 6,
+            "connections": [
+                8,
+                7,
+                3,
+                2
+            ]
+        },
+        {
+            "id": 7,
+            "connections": [
+                6,
+                8,
+                4,
+                3,
+                2
+            ]
+        },
+        {
+            "id": 2,
+            "connections": [
+                6,
+                7,
+                3,
+                1,
+                0
+            ]
+        },
+        {
+            "id": 3,
+            "connections": [
+                1,
+                2,
+                6,
+                7,
+                4,
+                5
+            ]
+        },
+        {
+            "id": 4,
+            "connections": [
+                3,
+                7,
+                5
+            ]
+        },
+        {
+            "id": 1,
+            "connections": [
+                0,
+                2,
+                3,
+                5
+            ]
+        },
+        {
+            "id": 0,
+            "connections": [
+                2,
+                1,
+                31
+            ]
+        },
+        {
+            "id": 5,
+            "connections": [
+                1,
+                3,
+                4,
+                19
+            ]
+        },
+        {
+            "id": 20,
+            "connections": [
+                19,
+                21,
+                22,
+                25
+            ]
+        },
+        {
+            "id": 21,
+            "connections": [
+                19,
+                20,
+                22,
+                23
+            ]
+        },
+        {
+            "id": 22,
+            "connections": [
+                20,
+                25,
+                24,
+                23,
+                21
+            ]
+        },
+        {
+            "id": 25,
+            "connections": [
+                13,
+                24,
+                22,
+                20
+            ]
+        },
+        {
+            "id": 24,
+            "connections": [
+                25,
+                22,
+                23,
+                26,
+                14
+            ]
+        },
+        {
+            "id": 23,
+            "connections": [
+                21,
+                22,
+                24,
+                26,
+                27,
+                28
+            ]
+        },
+        {
+            "id": 13,
+            "connections": [
+                10,
+                25,
+                14,
+                15,
+                16
+            ]
+        },
+        {
+            "id": 16,
+            "connections": [
+                13,
+                15,
+                17
+            ]
+        },
+        {
+            "id": 17,
+            "connections": [
+                16,
+                15,
+                18
+            ]
+        },
+        {
+            "id": 18,
+            "connections": [
+                17,
+                15
+            ]
+        },
+        {
+            "id": 14,
+            "connections": [
+                13,
+                15,
+                26,
+                24
+            ]
+        },
+        {
+            "id": 15,
+            "connections": [
+                14,
+                13,
+                16,
+                17,
+                18,
+                26
+            ]
+        },
+        {
+            "id": 26,
+            "connections": [
+                14,
+                15,
+                35,
+                27,
+                23,
+                24
+            ]
+        },
+        {
+            "id": 27,
+            "connections": [
+                23,
+                26,
+                35,
+                34,
+                28
+            ]
+        },
+        {
+            "id": 28,
+            "connections": [
+                23,
+                27,
+                34,
+                29
+            ]
+        },
+        {
+            "id": 29,
+            "connections": [
+                28,
+                34,
+                33,
+                36,
+                30
+            ]
+        },
+        {
+            "id": 30,
+            "connections": [
+                29,
+                36,
+                31
+            ]
+        },
+        {
+            "id": 31,
+            "connections": [
+                30,
+                36,
+                33,
+                32,
+                0
+            ]
+        },
+        {
+            "id": 36,
+            "connections": [
+                29,
+                33,
+                31,
+                30
+            ]
+        },
+        {
+            "id": 33,
+            "connections": [
+                34,
+                29,
+                36,
+                31,
+                32
+            ]
+        },
+        {
+            "id": 34,
+            "connections": [
+                33,
+                29,
+                28,
+                27,
+                35,
+                37
+            ]
+        },
+        {
+            "id": 35,
+            "connections": [
+                26,
+                27,
+                34,
+                37
+            ]
+        },
+        {
+            "id": 32,
+            "connections": [
+                33,
+                31
+            ]
+        },
+        {
+            "id": 37,
+            "connections": [
+                34,
+                35,
+                38
+            ]
+        },
+        {
+            "id": 38,
+            "connections": [
+                37,
+                40,
+                39,
+                41
+            ]
+        },
+        {
+            "id": 39,
+            "connections": [
+                41,
+                40,
+                38
+            ]
+        },
+        {
+            "id": 40,
+            "connections": [
+                41,
+                39,
+                38
+            ]
+        },
+        {
+            "id": 41,
+            "connections": [
+                40,
+                38,
+                39
+            ]
+        },
+        {
+            "id": 19,
+            "connections": [
+                5,
+                20,
+                21
+            ]
+        }
+    ],
+    "adding_id_set": false,
+    "adding_to": 19
+}"#;
+    return data.to_string();
 }
 
 pub fn get_colors_array() -> [&'static str; 6] {
