@@ -1,14 +1,20 @@
 use js_sys::Math::{sqrt};
+use sycamore::prelude::{RcSignal};
 use crate::element_getters::put_text_in_out_field;
 use crate::model::{Coord, Model, Player};
 use crate::ui_player_setup::PlayerConfig;
 use crate::utils::rand_int;
+use gloo::console::log as console_log;
+
 
 
 
 enum GameState {
-    Start,
     Setup,
+    ArmyPlacementStart,
+    Turn,
+    ArmyPlacement,
+
 }
 
 pub struct ProvLookupTable {
@@ -40,31 +46,24 @@ impl ProvLookupTable{
 }
 
 pub struct Game {
-    current_state:GameState,
-    model:Model,
+    state:GameState,
+    pub model:Model,
     prov_lookup:ProvLookupTable,
-    flag_scale:f64
+    flag_scale:f64,
+    army_placement_sig:Option<RcSignal<u32>>,
+    army_placement_done: Box<dyn Fn()>
 }
 
 
 impl Game {
     pub fn new(prov_lookup:ProvLookupTable) -> Game {
         return Game {
-            current_state: GameState::Start,
+            state: GameState::Setup,
             model:Model::new_from_json(),
             prov_lookup,
             flag_scale: 0.5,
-        }
-    }
-
-
-    fn assign_provs_random(&mut self){
-        let player_count = self.model.players.len() as i32;
-        for i in 0..self.model.provinces.len(){
-            let idx = rand_int(0, player_count as u32 + 1) as i32;
-            if idx < player_count{
-                self.model.provinces[i].owner_id = idx as u32
-            }
+            army_placement_sig: Option::None,
+            army_placement_done: Box::new(||{}),
         }
     }
 
@@ -76,7 +75,19 @@ impl Game {
         }
     }
 
+    fn assign_provs_random(&mut self){
+        gloo::console::log!(format!("players len = {}", self.model.players.len()));
+        let player_count = self.model.players.len() as i32;
+        for i in 0..self.model.provinces.len(){
+            let idx = rand_int(0, player_count as u32 ) as i32;
+            if idx < player_count{
+                self.model.provinces[i].owner_id = idx as u32
+            }
+        }
+    }
+
     pub fn set_player_config(&mut self, config:PlayerConfig){
+        gloo::console::log!(format!("player count = {}", config.player_count));
         for i in 0..config.player_count{
             self.model.players.push(Player{
                 id: i as u32,
@@ -87,6 +98,7 @@ impl Game {
         }
         self.assign_provs_random();
         self.draw_board();
+        self.state = GameState::ArmyPlacementStart;
     }
 
     #[allow(unused_variables)]
@@ -151,11 +163,17 @@ impl Game {
         }
 
         let prov_id = self.lookup_coord(&clicked_coord);
-        if prov_id.is_some(){
-            if !self.model.nav_tree.adding_id_set{
-                self.model.nav_tree.add_node(prov_id.unwrap());
-            }else{
-                self.model.nav_tree.add_connection(prov_id.unwrap());
+        if prov_id.is_some() && self.army_placement_sig.is_some(){
+            let current_armies_available = *self.army_placement_sig.clone().unwrap().get();
+            if current_armies_available> 1{
+                let id = prov_id.unwrap();
+                self.change_armies_in_prov(1, &id);
+                self.army_placement_sig.clone().unwrap().set(current_armies_available -1);
+                console_log!("placed an army in ", self.model.get_prov_name_from_id(&id));
+                self.draw_board();
+            }else {
+                (self.army_placement_done)();
+                console_log!("no armies to place");
             }
         }
     }
@@ -173,4 +191,24 @@ impl Game {
         self.model.nav_tree.verify_self();
     }
 
+    pub fn set_army_placement_sig<'a, F>(&mut self, num_army_sig:RcSignal<u32>, done_handler: F)
+        where
+            F: Fn() + 'a + 'static, {
+        self.army_placement_sig = Some(num_army_sig);
+        self.army_placement_done = Box::new(done_handler);
+
+    }
+
+    pub fn change_armies_in_prov(&mut self, num_armies:i32 ,prov_id:&u32){
+        let prov = self.model.get_prov_from_id_mut(prov_id)
+            .expect(format!("prov with id {} could not be found", prov_id).as_str());
+        let old_army_count = prov.army_count;
+
+        let new_army_count = old_army_count as i32 + num_armies;
+        if new_army_count > -1 {
+            prov.army_count = new_army_count as u32;
+        } else {
+            prov.army_count = 0;
+        }
+    }
 }

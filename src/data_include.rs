@@ -892,7 +892,9 @@ pub fn get_navtree_data() ->String{
         }
     ],
     "adding_id_set": false,
-    "adding_to": 19
+    "adding_to": 19,
+    "currently_selected": 0,
+    "selection_active": false
 }"#;
     return data.to_string();
 }

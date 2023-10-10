@@ -5,6 +5,7 @@ use wasm_bindgen::JsCast;
 use web_sys::{Event, HtmlInputElement, HtmlSelectElement};
 use crate::data_include::get_colors_array;
 use crate::game::Game;
+use crate::ui_main::UiState;
 
 
 #[derive(Debug, Clone)]
@@ -86,7 +87,7 @@ pub fn Color_Setup<'a, G: Html>(cx: Scope<'a>, props: PlayerConfigProps<'a>) -> 
 #[derive(Prop,  Clone)]
 pub struct PlayersSetupProps<'a> {
     pub game_ref:& 'a Signal<Rc<RefCell<Game>>>,
-    pub done:& 'a Signal<bool>,
+    pub ui_state:& 'a Signal<UiState>,
 }
 
 #[component]
@@ -150,7 +151,7 @@ pub fn PlayersSetup<'a, G : Html>(cx: Scope<'a>, props:PlayersSetupProps<'a>) ->
                 }
             }else{
                 (*props.game_ref.get()).borrow_mut().set_player_config(tmp_player_config);
-                props.done.set(true);
+                props.ui_state.set(UiState::ARMY_PLACEMENT_START);
             }
         }
 

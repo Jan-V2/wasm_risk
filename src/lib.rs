@@ -1,5 +1,4 @@
 #![allow(dead_code)]
-
 mod element_getters;
 mod canvas;
 mod html_elem_setup;
@@ -9,7 +8,6 @@ mod utils;
 mod data_include;
 mod ui_main;
 mod ui_player_setup;
-
 
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -21,26 +19,9 @@ use sycamore;
 use sycamore::prelude::Scope;
 use crate::element_getters::get_element_by_id;
 use crate::ui_main::{ UiMainProps};
-
-// todo figure out how to export this from a module
-#[wasm_bindgen]
-extern "C" {
-    // Use `js_namespace` here to bind `console.log(..)` instead of just
-    // `log(..)`
-    #[wasm_bindgen(js_namespace = console)]
-    fn log(s: &str);
-}
-
-macro_rules! console_log {
-    // Note that this is using the `log` function imported above during
-    // `bare_bones`
-    ($($t:tt)*) => (log(&format_args!($($t)*).to_string()))
-}
+use gloo::console::log as console_log;
 
 
-fn test_scoping(test:String){
-    console_log!("{test}");
-}
 
 #[wasm_bindgen(start)]
 fn setup() {
@@ -56,7 +37,7 @@ fn setup() {
 
     let refc_game = Rc::from(RefCell::from(game));
     canvas::ui_init_canvas(refc_game.clone());
-    html_elem_setup::setup_tree_builder_btns(refc_game.clone());
+    //html_elem_setup::setup_tree_builder_btns(refc_game.clone());
 
     let cloj = |cx:Scope| {
         ui_main::UiSide(cx, UiMainProps{

@@ -1,5 +1,6 @@
 use std::fmt;
 use std::fmt::Formatter;
+use queues::{IsQueue, Queue};
 use serde::{Deserialize, Serialize};
 use wasm_bindgen::prelude::wasm_bindgen;
 use web_sys::{HtmlCanvasElement, MouseEvent};
@@ -26,6 +27,7 @@ pub struct Model{
     pub provinces:Vec<Province>,
     pub nav_tree:NavTree,
     pub players:Vec<Player>,
+    pub rules:Rules,
 }
 
 impl Model{
@@ -34,6 +36,7 @@ impl Model{
             provinces:serde_json::from_str(&get_map_data()).unwrap(),
             nav_tree: serde_json::from_str(&get_navtree_data()).unwrap(),
             players: vec![],
+            rules: Rules {},
         }
     }
 
@@ -43,8 +46,51 @@ impl Model{
             self.players.push(Player::new(i as u32, colors[i as usize].to_string(), false));
         }
     }
+
+    pub fn get_prov_from_id_mut(&mut self, prov_id:&u32) -> Option< &mut Province>{
+        for prov in &mut self.provinces{
+            if prov.id == *prov_id{
+                return Some(prov);
+            }
+        }
+        None
+    }
+
+    pub fn get_prov_from_id(&self, prov_id:&u32) -> Option< &Province>{
+        for prov in &self.provinces{
+            if prov.id == *prov_id{
+                return Some(prov);
+            }
+        }
+        None
+    }
+
+    pub fn get_prov_name_from_id(&self, prov_id:&u32) ->String{
+        let prov = self.get_prov_from_id(prov_id);
+        if prov.is_some(){
+            return prov.unwrap().name.clone();
+        }else{
+            "prov not found".to_string()
+        }
+    }
 }
 
+
+pub struct Rules{}
+
+impl Rules {
+    pub fn armies_per_players_start(num_players:u32)->Option<u32> {
+        match num_players {
+            0 | 1 => None,
+            2 => Some(40),
+            3 => Some(35),
+            4 => Some(30),
+            5 => Some(25),
+            6 => Some(20),
+            _ => None
+        }
+    }
+}
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Coord{
@@ -148,11 +194,15 @@ impl NavNode {
     }
 }
 
+type ProvId = u32;
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct NavTree{
     nav_nodes:Vec<NavNode>,
     pub adding_id_set:bool,
     adding_to:u32,
+    currently_selected:ProvId, // make this a &province rather than id?
+    pub selection_active:bool,
 }
 
 impl NavTree {
@@ -161,21 +211,75 @@ impl NavTree {
             nav_nodes: vec![],
             adding_id_set: false,
             adding_to: 0,
+            currently_selected: 0,
+            selection_active: false,
         }
     }
-    
-    pub fn navigate_adjacent(&self, from:u32, to:u32) -> Option<bool>{
-        for node in &self.nav_nodes{
-            if node.id == from{
-                return Some(node.connections.contains(&to));
-            }
+
+    pub fn select_prov(&mut self, prov_id:u32){
+        self.currently_selected = prov_id;
+        self.selection_active = true
+    }
+
+    pub fn deselect(&mut self){
+        self.selection_active = false
+    }
+
+    fn validate_nav(&self, to:u32)->bool{
+        if !self.selection_active{
+            gloo::console::log!("can't navigate, no selection");
+            false;
         }
-        None
+        if self.currently_selected == to{
+            gloo::console::log!("can't navigate, to and from are the same");
+            false;
+        }
+        true
+    }
+
+    pub fn navigate_adjacent(&self, to:u32) ->Option<bool>{
+        if !self.validate_nav(to){
+            return None
+        }
+        return Some(self.get_node_from_id(&self.currently_selected).unwrap().connections.contains(&to));
     }
 
     #[allow(unused_variables)]
-    pub fn navigate_move(&self, from:u32, to:u32, provs:&Vec<Province>) -> bool{
-        todo!("impl dykstra and check if provs are owned by same person");
+    pub fn navigate_move(&self, to:u32, provs:&Vec<Province>) -> Option<bool>{
+        if !self.validate_nav(to){
+            return None
+        }
+        let mut visited:Vec<u32> = Vec::new();
+        let get_prov_with_id = |id:&u32|{
+            for prov in provs{
+                if prov.id == *id{
+                    return Some(prov);
+                }
+            }
+            None
+        };
+        let target_owner = get_prov_with_id(&self.currently_selected).unwrap().owner_id;
+        let mut visit_q:Queue<&Province> = Queue::new();
+        let _ = visit_q.add(get_prov_with_id(&self.currently_selected).unwrap());
+
+        while visit_q.size() > 0{
+            let curr_prov_id = visit_q.remove().unwrap().id;
+            visited.push(curr_prov_id);
+            let adjacent = self.get_node_from_id(&curr_prov_id).unwrap();
+            let next: Vec<_> = adjacent.connections.iter().filter(|prov_id|{
+                !visited.contains(prov_id)
+            }).filter(|prov_id|{
+                get_prov_with_id(prov_id).unwrap().owner_id == target_owner
+            }).collect();
+            for id in next{
+                if *id == to{
+                    return Some(true);
+                }else{
+                    let _ = visit_q.add(get_prov_with_id(&id).unwrap());
+                }
+            }
+        }
+        Some(false)
     }
 
     pub fn add_node(&mut self, id:u32){
@@ -219,18 +323,9 @@ impl NavTree {
     }
 
     pub fn verify_self(&self){
-        let get_node = |id:&u32|{
-            for node in &self.nav_nodes{
-                if node.id == *id{
-                    return Some(node);
-                }
-            }
-            None
-        };
-
         for node in &self.nav_nodes{
             for id in &node.connections{
-                if !get_node(id).unwrap().connections.contains(&node.id){
+                if !self.get_node_from_id(id).unwrap().connections.contains(&node.id){
                     gloo::console::log!(format!("node {} is missing connections", node.id));
                     return;
                 }
@@ -243,6 +338,16 @@ impl NavTree {
         self.adding_id_set = false;
         gloo::console::log!(format!("finished adding to {}", self.adding_to))
     }
+
+    fn get_node_from_id(&self, id:&u32)->Option<&NavNode>{
+        for node in &self.nav_nodes{
+            if node.id == *id{
+                return Some(node);
+            }
+        }
+        None
+    }
+
 
 }
 
