@@ -36,11 +36,18 @@ pub fn ui_init_canvas(game_model: Rc<RefCell<Game>>) {
         let label = get_html_label_by_id("xy_coord_label");
         label.set_inner_text(&format!("canvas coord x:{} y:{}", event.offset_x(), event.offset_y()));
 
-        let text = game_model_clone.as_ref().borrow().get_prov_mouseover_string(&Coord{
-            x: event.offset_x(),
-            y: event.offset_y(),
-        });
-        game_model_clone.as_ref().borrow().draw_board();
+        let mut text:Option<String> = None;
+        let game_borrow = game_model_clone.as_ref().try_borrow();
+        if game_borrow.is_ok(){
+            let game_unwrap = game_borrow.unwrap();
+            text = game_unwrap.get_prov_mouseover_string(&Coord{
+                x: event.offset_x(),
+                y: event.offset_y(),
+            });
+            game_unwrap.draw_board();
+        }
+
+
 
         if text.is_some(){
             let canvas = get_canvas();

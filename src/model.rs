@@ -397,7 +397,7 @@ impl Player {
         }
     }
 
-    fn get_owned_provs<'a>(&self, provs: &'a Vec<Province>) -> Vec<&'a Province>{
+    pub fn get_owned_provs<'a>(&self, provs: &'a Vec<Province>) -> Vec<&'a Province>{
         let mut ret:Vec<&Province> = Vec::new();
         for prov in provs{
             if prov.owner_id == self.id{

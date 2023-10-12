@@ -13,8 +13,9 @@ pub enum UiState{
     TURN_START,
     TURN,
     COMBAT,
+    GAME_END,
     CARD_SELECT,
-    GAME_END
+
 }
 
 #[derive(Prop)]
@@ -22,64 +23,89 @@ pub struct UiMainProps {
     pub game_ref:Rc<RefCell<Game>>
 }
 
+pub struct ArmyPlacementInfo{
+    army_count :RcSignal<u32>,
+    is_done:RcSignal<bool>,
+}
+impl ArmyPlacementInfo{
+    fn new()->ArmyPlacementInfo{
+        ArmyPlacementInfo{
+            army_count: Default::default(),
+            is_done: create_rc_signal(true),
+        }
+    }
+}
+
+#[derive(Copy, Clone, Eq, PartialEq)]
+pub struct UiInfo{
+    pub army_count:u32,
+    pub is_done:bool,
+    pub army_placement:bool,
+    pub updated:bool,
+    pub current_player:u32,
+}
+
+impl UiInfo{
+    pub fn new() -> UiInfo{
+        UiInfo{
+            army_count: 0,
+            is_done: false,
+            army_placement: false,
+            updated: false,
+            current_player: 0,
+        }
+    }
+}
+
 #[component]
 pub fn UiSide< G: Html>(cx: Scope, props:UiMainProps) -> View<G> {
     let setup_done_sig:&Signal<UiState> = create_signal(cx, UiState::SETUP);
     let arg_ref = create_signal(cx,  props.game_ref.clone());
-    let player_width_turn:&Signal<u32> = create_signal(cx, 0);
+
+
+    let ui_info_rc = props.game_ref.borrow().get_ui_info_clone();
+    let ui_info_sig = create_signal(cx, *ui_info_rc.get().clone());
+
+    let _ = create_memo(cx, move ||{
+        if *ui_info_rc.get() != *ui_info_sig.get(){
+            if ui_info_sig.get().updated {
+                let mut tmp = *ui_info_sig.get();
+                tmp.updated = false;
+                ui_info_rc.set(tmp.clone());
+                ui_info_sig.set(tmp);
+            }else{
+                let mut tmp = *ui_info_rc.get();
+                tmp.updated = false;
+                ui_info_sig.set(tmp.clone());
+                ui_info_rc.set(tmp);
+            }
+        }
+    });
+
     view!{cx, div {
         (if  *setup_done_sig.get() == UiState::SETUP {
             view!{ cx,
                 PlayersSetup(game_ref=arg_ref, ui_state=setup_done_sig)
             }
-
-        }else if *setup_done_sig.get() == UiState::TURN_START || *setup_done_sig.get() == UiState::TURN  {
+        }else if *setup_done_sig.get() == UiState::ARMY_PLACEMENT_START{
+            view!{cx,
+                ArmyPlacementStart(ui_state=setup_done_sig, ui_info=ui_info_sig)
+            }
+        }else if *setup_done_sig.get() == UiState::TURN_START  {
             view!{ cx,
-                Turn_Ui(game_ref=arg_ref, player_with_turn=player_width_turn)
+                Turn_Ui(army_num=9u32, player_id=1u32, ui_state=setup_done_sig, ui_info=ui_info_sig) // this comp also sets it
+            }
+        }else if *setup_done_sig.get() == UiState::GAME_END{
+            view!{ cx,
+                div { "game end" }
             }
         }else{
             view!{ cx,
-                div { "setup finished" }
+                div { "default ui state" }
             }
         })
     }}
 }
-
-
-
-
-#[component(inline_props)]
-pub fn ArmyPlacementStart<'a, G: Html>(cx: Scope<'a>,
-                    game_ref:& 'a Signal<Rc<RefCell<Game>>>,
-                    ui_state:& 'a Signal<UiState>,
-) -> View<G> {
-
-    let is_done = create_signal(cx, true);
-    let current_player = create_signal(cx, 0u32);
-    let num_armies = create_signal(cx, 30u32);
-    // todo make it so the armies are placed for one player after another
-    let _ = create_memo(cx, move ||{
-        if *is_done.get(){
-            let max_players = (*game_ref.get()).borrow_mut().model.players.len() as u32;
-            if *current_player.get() + 1 < max_players{
-
-            }else {
-
-            }
-        }
-    });
-
-    view!{cx,
-        div {"turn ui " (current_player.get()) }
-
-                ArmyPlacementUi(is_done=is_done, game_ref =game_ref,
-                    player_with_turn=current_player, num_armies=num_armies
-                )
-
-
-    }
-}
-
 
 
 #[derive(Prop)]
@@ -89,48 +115,103 @@ pub struct TurnUiProps<'a> {
 }
 
 
-#[component]
-pub fn Turn_Ui<'a, G: Html>(cx: Scope<'a>, props:TurnUiProps<'a>) -> View<G> {
-    let show = create_signal( cx,true);
-    let num_armies_sig = create_signal(cx, 10u32);
-    let player_with_turn = create_signal(cx, 0u32);
+#[component(inline_props)]
+pub fn Turn_Ui<'a, G: Html>(cx: Scope<'a>,
+                            army_num:u32,
+                            player_id:u32,
+                            ui_state:& 'a Signal<UiState>,
+                            ui_info: & 'a Signal<UiInfo>,
+) -> View<G> {
+
+    let mut tmp = *ui_info.get();
+    let mut run_setup = false;
+    if !run_setup{
+        gloo::console::log!("running setup");
+        tmp.updated = true;
+        tmp.army_placement = true;
+        tmp.army_count = army_num;
+        tmp.current_player = player_id;
+        ui_info.set(tmp);
+        run_setup = true;
+    }else{
+        gloo::console::log!("running else");
+        if tmp.army_count == 0{
+            ui_state.set(UiState::GAME_END);
+        }
+    }
+
+
+    let _ = create_memo(cx, move ||{
+        let tmp = *ui_info.get();
+        if tmp.army_count == 0{
+            ui_state.set(UiState::GAME_END);
+        }
+    });
+
     view!{cx,
-        div {"turn ui " (props.player_with_turn.get()) }
-        (if  *show.get(){
-            view!{cx,
-                ArmyPlacementUi(is_done=show, game_ref = props.game_ref,
-                    player_with_turn=player_with_turn, num_armies=num_armies_sig
-                )
-                }
-            }else{
-                view!{cx,
-                    div{}
-                }
-            }
-        )
+        div{"turn test"}
+            h1{"Player " (ui_info.get().current_player + 1 )}
+            div{"You still have " (ui_info.get().army_count)  " armies to place"}
     }
 }
-
 
 
 #[component(inline_props)]
 pub fn ArmyPlacementUi<'a, G: Html>(cx: Scope<'a>,
-                                       game_ref:& 'a Signal<Rc<RefCell<Game>>>,
-                                       player_with_turn:& 'a Signal<u32>,
-                                       num_armies:& 'a Signal<u32>,
-                                       is_done: &'a Signal<bool>) -> View<G>
+                                    ui_info: & 'a Signal<UiInfo>,) -> View<G>
 {
-    let num_armies_sig = create_rc_signal( *num_armies.get());
-    let armies_sig2 = num_armies_sig.clone();
-    let show = create_rc_signal(true);
-    let show_clone = show.clone();
-    let _ = create_memo(cx,  move|| {is_done.set(*show.get())} );
-    (*game_ref.get()).borrow_mut().set_army_placement_sig(num_armies_sig.clone(), move  || {show_clone.set(false)} );
 
     view!{cx,
-        div{
-            h1{"Player " (*player_with_turn.get())}
-            div{"You still have " (*armies_sig2.get())  " armies to place"}
-        }
+            h1{"Player " (ui_info.get().current_player + 1 )}
+            div{"You still have " (ui_info.get().army_count)  " armies to place"}
     }
 }
+
+
+#[component(inline_props)]
+pub fn ArmyPlacementStart<'a, G: Html>(cx: Scope<'a>,
+                    ui_state:& 'a Signal<UiState>,
+                    ui_info: & 'a Signal<UiInfo>,
+) -> View<G> {
+
+    gloo::console::log!("running place start");
+    let mut tmp = *ui_info.get();
+    tmp.updated = true;
+    tmp.army_placement = true;
+    tmp.is_done = false;
+    tmp.army_count = 2;
+    ui_info.set(tmp);
+
+
+
+    let _ = create_memo(cx, move ||{
+
+        if ui_info.get().army_count == 0{
+            let max_players =  2;
+            if ui_info.get().current_player + 1 < max_players{
+                let mut tmp = *ui_info.get();
+                tmp.updated = true;
+                tmp.current_player = tmp.current_player +1;
+                tmp.is_done = false;
+                tmp.army_count = 2;
+                ui_info.set(tmp);
+            }else {
+                let mut tmp = *ui_info.get();
+                tmp.updated = true;
+                tmp.is_done = false;
+                ui_info.set(tmp);
+                ui_state.set(UiState::TURN_START)
+            }
+        }
+    });
+
+    view!{cx,
+            h1{"Player " (ui_info.get().current_player + 1 )}
+            div{"You still have " (ui_info.get().army_count)  " armies to place"}
+    }
+}
+
+
+
+
+

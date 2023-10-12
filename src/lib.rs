@@ -26,6 +26,7 @@ use gloo::console::log as console_log;
 #[wasm_bindgen(start)]
 fn setup() {
     console_error_panic_hook::set_once();
+    tracing_wasm::set_as_global_default();
 
     let mut prov_coords:Vec<[i32; 2]> = Vec::new();
     prov_coords.push([388, 204]);

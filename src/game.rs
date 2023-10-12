@@ -1,12 +1,11 @@
 use js_sys::Math::{sqrt};
-use sycamore::prelude::{RcSignal};
+use sycamore::prelude::{create_rc_signal, RcSignal};
 use crate::element_getters::put_text_in_out_field;
-use crate::model::{Coord, Model, Player};
+use crate::model::{Coord, Model, Player, Rules};
 use crate::ui_player_setup::PlayerConfig;
 use crate::utils::rand_int;
 use gloo::console::log as console_log;
-
-
+use crate::ui_main::UiInfo;
 
 
 enum GameState {
@@ -51,7 +50,8 @@ pub struct Game {
     prov_lookup:ProvLookupTable,
     flag_scale:f64,
     army_placement_sig:Option<RcSignal<u32>>,
-    army_placement_done: Box<dyn Fn()>
+    army_placement_done: RcSignal<bool>,
+    ui_info:RcSignal<UiInfo>,
 }
 
 
@@ -63,7 +63,8 @@ impl Game {
             prov_lookup,
             flag_scale: 0.5,
             army_placement_sig: Option::None,
-            army_placement_done: Box::new(||{}),
+            army_placement_done: Default::default(),
+            ui_info: create_rc_signal(UiInfo::new()),
         }
     }
 
@@ -163,16 +164,21 @@ impl Game {
         }
 
         let prov_id = self.lookup_coord(&clicked_coord);
-        if prov_id.is_some() && self.army_placement_sig.is_some(){
-            let current_armies_available = *self.army_placement_sig.clone().unwrap().get();
-            if current_armies_available> 1{
+        let mut tmp_ui_info = *self.ui_info.get();
+        if prov_id.is_some() && tmp_ui_info.army_placement{
+            let current_armies_available = tmp_ui_info.army_count;
+            if current_armies_available> 0{
                 let id = prov_id.unwrap();
                 self.change_armies_in_prov(1, &id);
-                self.army_placement_sig.clone().unwrap().set(current_armies_available -1);
+                tmp_ui_info.army_count = tmp_ui_info.army_count -1;
+                tmp_ui_info.updated = true;
+                self.ui_info.set(tmp_ui_info);
                 console_log!("placed an army in ", self.model.get_prov_name_from_id(&id));
                 self.draw_board();
             }else {
-                (self.army_placement_done)();
+                tmp_ui_info.updated = true;
+                tmp_ui_info.is_done = true;
+                self.ui_info.set(tmp_ui_info);
                 console_log!("no armies to place");
             }
         }
@@ -191,11 +197,9 @@ impl Game {
         self.model.nav_tree.verify_self();
     }
 
-    pub fn set_army_placement_sig<'a, F>(&mut self, num_army_sig:RcSignal<u32>, done_handler: F)
-        where
-            F: Fn() + 'a + 'static, {
+    pub fn set_army_placement_sig(&mut self, num_army_sig:RcSignal<u32>, army_placement_done:RcSignal<bool>){
         self.army_placement_sig = Some(num_army_sig);
-        self.army_placement_done = Box::new(done_handler);
+        self.army_placement_done = army_placement_done;
 
     }
 
@@ -211,4 +215,15 @@ impl Game {
             prov.army_count = 0;
         }
     }
+
+    pub fn get_free_armies_available_start(&self, player_id:u32) -> u32{
+        let armies_total = Rules::armies_per_players_start(self.model.players.len() as u32).unwrap();
+        let owned = self.model.players[player_id as usize].get_owned_provs(&self.model.provinces).len() as u32;
+        return armies_total - owned;
+    }
+
+    pub fn get_ui_info_clone(&self) -> RcSignal<UiInfo>{
+        return self.ui_info.clone();
+    }
+
 }

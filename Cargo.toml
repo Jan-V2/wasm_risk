@@ -21,6 +21,7 @@ serde = { version = "1.0.188", features = ["derive"] }
 gloo = "0.10.0"
 sycamore = {version = "0.8.2", features = ["wasm-bindgen", "web", "web-sys", "sycamore-web"]}
 shrinkwraprs = "0.3.0"
+tracing-wasm = "0.2.1"
 
 
 [dependencies.web-sys]
