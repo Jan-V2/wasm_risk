@@ -6,8 +6,9 @@ mod model;
 mod game;
 mod utils;
 mod data_include;
-mod ui_main;
-mod ui_player_setup;
+mod ui;
+
+
 
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -18,7 +19,7 @@ use crate::model::{new_prov_array_to_json, NewProvince, prov_array_from_json};
 use sycamore;
 use sycamore::prelude::Scope;
 use crate::element_getters::get_element_by_id;
-use crate::ui_main::{ UiMainProps};
+use crate::ui::main::{ UiMainProps};
 use gloo::console::log as console_log;
 
 
@@ -41,7 +42,8 @@ fn setup() {
     //html_elem_setup::setup_tree_builder_btns(refc_game.clone());
 
     let cloj = |cx:Scope| {
-        ui_main::UiSide(cx, UiMainProps{
+
+        ui::main::UiSide(cx, UiMainProps{
             game_ref: refc_game
         })
     };

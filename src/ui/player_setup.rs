@@ -5,7 +5,7 @@ use wasm_bindgen::JsCast;
 use web_sys::{Event, HtmlInputElement, HtmlSelectElement};
 use crate::data_include::get_colors_array;
 use crate::game::Game;
-use crate::ui_main::UiState;
+use crate::ui::main::UiState;
 
 
 #[derive(Debug, Clone)]
@@ -104,7 +104,6 @@ pub fn PlayersSetup<'a, G : Html>(cx: Scope<'a>, props:PlayersSetupProps<'a>) ->
 
     let next = move || {
         let mut tmp_player_config = (*player_config_sig.get()).clone();
-
 
         if *next_sig.get() == true{
             let player_count = &(*player_config_sig.get()).player_count;

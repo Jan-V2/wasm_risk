@@ -1,0 +1,99 @@
+use sycamore::prelude::{create_rc_signal, RcSignal};
+use crate::ui::main::UiState;
+use crate::utils::consts::MAX_PLAYERS;
+
+pub trait UiUpdatable {
+    fn update<F>(self, f:F ) -> Self
+        where F: Fn(&mut Self),  Self: Sized;
+}
+
+#[derive(Clone)]
+pub struct UiInfo{
+    pub ui_state: RcSignal<UiState>,
+    pub start_placement:RcSignal<StartArmyPlacementInfo>,
+    pub placement:RcSignal<ArmyPlacementInfo>,
+}
+
+impl UiInfo {
+    pub fn new()->UiInfo{
+        UiInfo{
+            ui_state:create_rc_signal(UiState::SETUP),
+            start_placement: create_rc_signal(StartArmyPlacementInfo::new()),
+            placement: create_rc_signal(ArmyPlacementInfo::new()),
+        }
+    }
+
+    pub fn update_start_placement<F>(&self, f:F)where
+    F:Fn(StartArmyPlacementInfo) -> StartArmyPlacementInfo{
+        let mut tmp = *self.start_placement.get();
+        tmp = f(tmp);
+        tmp.updated = true;
+        self.start_placement.set(tmp);
+    }
+}
+
+
+
+#[derive(Copy, Clone, Eq, PartialEq)]
+pub struct StartArmyPlacementInfo {
+    pub is_done: bool,
+    pub updated: bool,
+    pub current_player: u32,
+    pub num_players:u32,
+    pub armies_per_player: [u32; MAX_PLAYERS],
+}
+
+
+impl UiUpdatable for StartArmyPlacementInfo{
+    fn update<F>(self, f: F) -> Self where F: Fn(&mut Self) {
+        let mut tmp = self.clone();
+        f(&mut tmp);
+        tmp.updated = true;
+        return tmp;
+    }
+}
+
+impl StartArmyPlacementInfo {
+    pub fn new() -> StartArmyPlacementInfo {
+        StartArmyPlacementInfo {
+            is_done: false,
+            updated: false,
+            current_player: 0,
+            num_players: 0,
+            armies_per_player: [0; MAX_PLAYERS],
+        }
+    }
+}
+
+
+
+
+#[derive(Copy, Clone, Eq, PartialEq)]
+pub struct ArmyPlacementInfo {
+    pub army_count: u32,
+    pub is_done: bool,
+    pub updated: bool,
+    pub current_player: u32,
+}
+
+
+impl UiUpdatable for ArmyPlacementInfo{
+    fn update<F>(self, f: F) -> Self
+        where F: Fn(&mut Self), Self: Sized {
+        let mut tmp = self.clone();
+        f(&mut tmp);
+        tmp.updated = true;
+        return tmp;
+    }
+}
+
+impl ArmyPlacementInfo {
+    pub fn new() -> ArmyPlacementInfo {
+        ArmyPlacementInfo {
+            army_count: 0,
+            is_done: false,
+            updated: false,
+            current_player: 0,
+        }
+    }
+}

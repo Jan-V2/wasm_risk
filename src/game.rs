@@ -1,12 +1,11 @@
-use js_sys::Math::{sqrt};
-use sycamore::prelude::{create_rc_signal, RcSignal};
+use js_sys::Math::sqrt;
 use crate::element_getters::put_text_in_out_field;
 use crate::model::{Coord, Model, Player, Rules};
-use crate::ui_player_setup::PlayerConfig;
-use crate::utils::rand_int;
+use crate::ui::player_setup::PlayerConfig;
+use crate::utils::funcs::rand_int;
 use gloo::console::log as console_log;
-use crate::ui_main::UiInfo;
-
+use crate::ui::structs::{ArmyPlacementInfo, StartArmyPlacementInfo, UiInfo, UiUpdatable};
+use crate::ui::main::UiState;
 
 enum GameState {
     Setup,
@@ -49,9 +48,7 @@ pub struct Game {
     pub model:Model,
     prov_lookup:ProvLookupTable,
     flag_scale:f64,
-    army_placement_sig:Option<RcSignal<u32>>,
-    army_placement_done: RcSignal<bool>,
-    ui_info:RcSignal<UiInfo>,
+    ui_info:UiInfo
 }
 
 
@@ -62,9 +59,7 @@ impl Game {
             model:Model::new_from_json(),
             prov_lookup,
             flag_scale: 0.5,
-            army_placement_sig: Option::None,
-            army_placement_done: Default::default(),
-            ui_info: create_rc_signal(UiInfo::new()),
+            ui_info: UiInfo::new()
         }
     }
 
@@ -77,12 +72,14 @@ impl Game {
     }
 
     fn assign_provs_random(&mut self){
+        // todo make this not random
         gloo::console::log!(format!("players len = {}", self.model.players.len()));
         let player_count = self.model.players.len() as i32;
         for i in 0..self.model.provinces.len(){
             let idx = rand_int(0, player_count as u32 ) as i32;
             if idx < player_count{
-                self.model.provinces[i].owner_id = idx as u32
+                self.model.provinces[i].owner_id = idx as u32;
+                self.model.provinces[i].army_count = 1;
             }
         }
     }
@@ -97,7 +94,26 @@ impl Game {
                 is_computer: config.player_is_ai[i as usize],
             })
         }
+        let armies_per_player = Rules::armies_per_players_start(config.player_count as u32).unwrap();
         self.assign_provs_random();
+
+        let provs = &self.model.provinces;
+        self.ui_info.update_start_placement(|mut j:StartArmyPlacementInfo|{
+            j.num_players = config.player_count as u32;
+            for i in 0..j.num_players as usize{
+                let armies = armies_per_player - self.model.players[i].get_owned_provs(provs).len() as u32;
+                console_log!(format!("founf {} armies for player {}", armies, i));
+                j.armies_per_player[i] = armies;
+            }
+            return j;
+        });
+
+        let data = &self.ui_info.start_placement;
+
+        data.set(data.get().update(|tmp|{
+            tmp.current_player = 2;
+        }));
+
         self.draw_board();
         self.state = GameState::ArmyPlacementStart;
     }
@@ -164,24 +180,48 @@ impl Game {
         }
 
         let prov_id = self.lookup_coord(&clicked_coord);
-        let mut tmp_ui_info = *self.ui_info.get();
-        if prov_id.is_some() && tmp_ui_info.army_placement{
-            let current_armies_available = tmp_ui_info.army_count;
-            if current_armies_available> 0{
-                let id = prov_id.unwrap();
-                self.change_armies_in_prov(1, &id);
-                tmp_ui_info.army_count = tmp_ui_info.army_count -1;
-                tmp_ui_info.updated = true;
-                self.ui_info.set(tmp_ui_info);
-                console_log!("placed an army in ", self.model.get_prov_name_from_id(&id));
-                self.draw_board();
-            }else {
-                tmp_ui_info.updated = true;
-                tmp_ui_info.is_done = true;
-                self.ui_info.set(tmp_ui_info);
-                console_log!("no armies to place");
+        if *self.ui_info.ui_state.get() == UiState::ARMY_PLACEMENT_START{
+            let mut tmp_ui_info = *self.ui_info.start_placement.get();
+            if prov_id.is_some() {
+                let current_armies_available = tmp_ui_info.armies_per_player[tmp_ui_info.current_player as usize];
+                if current_armies_available> 0{
+                    let id = prov_id.unwrap();
+                    self.change_armies_in_prov(1, &id);
+                    tmp_ui_info.armies_per_player[tmp_ui_info.current_player as usize] = current_armies_available -1;
+                    tmp_ui_info.updated = true;
+                    self.ui_info.start_placement.set(tmp_ui_info);
+                    console_log!("placed an army in ", self.model.get_prov_name_from_id(&id));
+                    self.draw_board();
+                }else {
+                    tmp_ui_info.updated = true;
+                    tmp_ui_info.is_done = true;
+                    self.ui_info.start_placement.set(tmp_ui_info);
+                    console_log!("no armies to place");
+                }
             }
+        }else  if *self.ui_info.ui_state.get() == UiState::ARMY_PLACEMENT{
+            let mut tmp_ui_info = *self.ui_info.placement.get();
+            if prov_id.is_some() {
+                let current_armies_available = tmp_ui_info.army_count;
+                if current_armies_available> 0{
+                    let id = prov_id.unwrap();
+                    self.change_armies_in_prov(1, &id);
+                    tmp_ui_info.army_count = tmp_ui_info.army_count -1;
+                    tmp_ui_info.updated = true;
+                    self.ui_info.placement.set(tmp_ui_info);
+                    console_log!("placed an army in ", self.model.get_prov_name_from_id(&id));
+                    self.draw_board();
+                }else {
+                    tmp_ui_info.updated = true;
+                    tmp_ui_info.is_done = true;
+                    self.ui_info.placement.set(tmp_ui_info);
+                    console_log!("no armies to place");
+                }
+            }
+        }else {
+            gloo::console::log!(format!("army state if {:?}", self.ui_info.ui_state.get()))
         }
+
     }
 
     pub fn nav_tree_end_add(&mut self){
@@ -197,11 +237,7 @@ impl Game {
         self.model.nav_tree.verify_self();
     }
 
-    pub fn set_army_placement_sig(&mut self, num_army_sig:RcSignal<u32>, army_placement_done:RcSignal<bool>){
-        self.army_placement_sig = Some(num_army_sig);
-        self.army_placement_done = army_placement_done;
 
-    }
 
     pub fn change_armies_in_prov(&mut self, num_armies:i32 ,prov_id:&u32){
         let prov = self.model.get_prov_from_id_mut(prov_id)
@@ -222,7 +258,7 @@ impl Game {
         return armies_total - owned;
     }
 
-    pub fn get_ui_info_clone(&self) -> RcSignal<UiInfo>{
+    pub fn get_ui_info_clone(&self) -> UiInfo{
         return self.ui_info.clone();
     }
 
