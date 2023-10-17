@@ -105,11 +105,6 @@ fn draw_all_flags(model: &Model, scale: f64) {
     }
 }
 
-pub fn draw_flag(prov: &Province, color:&String, scale: f64) {
-    let canvas = get_canvas();
-    let ct = get_drawing_context(&canvas);
-    draw_flag_raw(prov, color, scale, &ct);
-}
 
 fn draw_flag_raw(prov: &Province, color:&String, scale: f64, ct: &CanvasRenderingContext2d) {
     let bot_w = 30f64 * scale;

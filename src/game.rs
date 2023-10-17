@@ -4,7 +4,7 @@ use crate::model::{Coord, Model, Player, Rules};
 use crate::ui::player_setup::PlayerConfig;
 use crate::utils::funcs::rand_int;
 use gloo::console::log as console_log;
-use crate::ui::structs::{ArmyPlacementInfo, StartArmyPlacementInfo, UiInfo, UiUpdatable};
+use crate::ui::structs::{ StartArmyPlacementInfo, UiInfo, UiUpdatable};
 use crate::ui::main::UiState;
 
 enum GameState {
@@ -72,7 +72,7 @@ impl Game {
     }
 
     fn assign_provs_random(&mut self){
-        // todo make this not random
+        // todo make this not a random number per player
         gloo::console::log!(format!("players len = {}", self.model.players.len()));
         let player_count = self.model.players.len() as i32;
         for i in 0..self.model.provinces.len(){

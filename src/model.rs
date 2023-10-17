@@ -2,24 +2,9 @@ use std::fmt;
 use std::fmt::Formatter;
 use queues::{IsQueue, Queue};
 use serde::{Deserialize, Serialize};
-use wasm_bindgen::prelude::wasm_bindgen;
-use web_sys::{HtmlCanvasElement, MouseEvent};
-use crate::data_include::{get_colors_array, get_map_data, get_navtree_data};
+use crate::data_include::{ get_map_data, get_navtree_data};
 
 
-#[wasm_bindgen]
-extern "C" {
-    // Use `js_namespace` here to bind `console.log(..)` instead of just
-    // `log(..)`
-    #[wasm_bindgen(js_namespace = console)]
-    fn log(s: &str);
-}
-
-macro_rules! console_log {
-    // Note that this is using the `log` function imported above during
-    // `bare_bones`
-    ($($t:tt)*) => (log(&format_args!($($t)*).to_string()))
-}
 
 
 
@@ -40,12 +25,6 @@ impl Model{
         }
     }
 
-    pub fn test_add_players(&mut self, count:i32){
-        let colors = get_colors_array();
-        for i in 0..count{
-            self.players.push(Player::new(i as u32, colors[i as usize].to_string(), false));
-        }
-    }
 
     pub fn get_prov_from_id_mut(&mut self, prov_id:&u32) -> Option< &mut Province>{
         for prov in &mut self.provinces{
@@ -99,22 +78,6 @@ pub struct Coord{
 }
 
 
-impl Coord {
-    pub fn new(x:i32, y:i32) -> Coord{
-        return Coord{
-            x,
-            y
-        }
-    }
-
-    pub fn from_canvas_event( canvas:HtmlCanvasElement, event:MouseEvent) -> Coord{
-        return Coord{
-            x:event.x() - canvas.offset_left(),
-            y:event.y() - canvas.offset_top()
-        }
-    }
-}
-
 impl fmt::Display for Coord{
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         return write!(f, "{{ x:{}, y:{} }}", self.x, self.y);
@@ -166,13 +129,14 @@ pub struct Province{
 }
 
 impl Province{
+    #[allow(dead_code)]
     pub fn from_i32_pair(x:i32, y:i32) -> Province{
         return Province{
             name: "none".to_string(),
             id:0,
             army_count: 0,
             owner_id: 100,
-            location:Coord::new(x, y),
+            location:Coord{ x, y, },
             continent:Continent::Africa,
             card_type: TerritoryCardType::Infantry,
         }
@@ -186,6 +150,7 @@ pub struct NavNode{
 }
 
 impl NavNode {
+    #[allow(dead_code)]
     pub fn new(id:u32)->NavNode{
         NavNode{
             id,
@@ -205,6 +170,7 @@ pub struct NavTree{
     pub selection_active:bool,
 }
 
+#[allow(dead_code)]
 impl NavTree {
     pub fn new()->NavTree{
         NavTree{
@@ -244,7 +210,7 @@ impl NavTree {
         return Some(self.get_node_from_id(&self.currently_selected).unwrap().connections.contains(&to));
     }
 
-    #[allow(unused_variables)]
+  //  #[allow(unused_variables)]
     pub fn navigate_move(&self, to:u32, provs:&Vec<Province>) -> Option<bool>{
         if !self.validate_nav(to){
             return None
@@ -351,32 +317,6 @@ impl NavTree {
 
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-pub struct NewProvince{
-    pub name:String,
-    pub id:u32,
-    pub owner_id:u32,
-    pub army_count:u32,
-    pub location:Coord,
-    pub continent:Continent,
-    pub card_type: TerritoryCardType,
-    pub connections:Vec<u32>,
-}
-
-impl NewProvince{
-    pub fn from_prov(p:&Province)-> NewProvince{
-        return NewProvince{
-            name: p.name.clone(),
-            id: p.id,
-            owner_id: p.owner_id,
-            army_count: p.army_count,
-            location: p.location.clone(),
-            continent: p.continent.clone(),
-            card_type: p.card_type.clone(),
-            connections: vec![],
-        }
-    }
-}
 
 
 
@@ -388,6 +328,7 @@ pub struct Player{
 }
 
 impl Player {
+    #[allow(dead_code)]
     fn new(id:u32, color:String, is_computer:bool) -> Player{
         return Player{
             id,
@@ -410,14 +351,4 @@ impl Player {
 
 
 
-pub fn prov_array_from_json() -> Vec<Province>{
-    return serde_json::from_str(&get_map_data()).unwrap();
-}
 
-pub fn prov_array_to_json(prov_array: &Vec<Province>){
-    console_log!("{}",  serde_json::to_string(prov_array).unwrap())
-}
-
-pub fn new_prov_array_to_json(prov_array: &Vec<NewProvince>){
-    console_log!("{}",  serde_json::to_string(prov_array).unwrap())
-}

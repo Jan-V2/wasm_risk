@@ -106,13 +106,6 @@ pub fn UiSide<G: Html>(cx: Scope, props: UiMainProps) -> View<G> {
 }
 
 
-#[derive(Prop)]
-pub struct TurnUiProps<'a> {
-    game_ref: &'a Signal<Rc<RefCell<Game>>>,
-    player_with_turn: &'a Signal<u32>,
-}
-
-
 #[component(inline_props)]
 pub fn Turn_Ui<'a, G: Html>(cx: Scope<'a>,
                             army_num: u32,
@@ -120,20 +113,11 @@ pub fn Turn_Ui<'a, G: Html>(cx: Scope<'a>,
                             ui_state: &'a Signal<UiState>,
                             ui_info: &'a Signal<ArmyPlacementInfo>,
 ) -> View<G> {
-    let mut run_setup = false;
-    if !run_setup {
-        gloo::console::log!("running setup");
-        ui_info.set(ui_info.get().update(|tmp|{
-            tmp.army_count = army_num;
-            tmp.current_player = player_id
-        }));
-        run_setup = true;
-    } else {
-        gloo::console::log!("running else");
-        if ui_info.get().army_count == 0 {
-            ui_state.set(UiState::GAME_END);
-        }
-    }
+    gloo::console::log!("running setup");
+    ui_info.set(ui_info.get().update(|tmp| {
+        tmp.army_count = army_num;
+        tmp.current_player = player_id
+    }));
 
 
     let _ = create_memo(cx, move || {
