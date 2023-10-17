@@ -1,19 +1,13 @@
 use js_sys::Math::sqrt;
-use crate::element_getters::put_text_in_out_field;
+use crate::element_getters::set_info_field;
 use crate::model::{Coord, Model, Player, Rules};
 use crate::ui::player_setup::PlayerConfig;
 use crate::utils::funcs::rand_int;
 use gloo::console::log as console_log;
-use crate::ui::structs::{ StartArmyPlacementInfo, UiInfo, UiUpdatable};
+use crate::ui::structs::{  UiInfo, UiUpdatable};
 use crate::ui::main::UiState;
 
-enum GameState {
-    Setup,
-    ArmyPlacementStart,
-    Turn,
-    ArmyPlacement,
 
-}
 
 pub struct ProvLookupTable {
     pub pixels:Vec<[u8; 3]>,
@@ -44,7 +38,6 @@ impl ProvLookupTable{
 }
 
 pub struct Game {
-    state:GameState,
     pub model:Model,
     prov_lookup:ProvLookupTable,
     flag_scale:f64,
@@ -55,7 +48,6 @@ pub struct Game {
 impl Game {
     pub fn new(prov_lookup:ProvLookupTable) -> Game {
         return Game {
-            state: GameState::Setup,
             model:Model::new_from_json(),
             prov_lookup,
             flag_scale: 0.5,
@@ -98,30 +90,20 @@ impl Game {
         self.assign_provs_random();
 
         let provs = &self.model.provinces;
-        self.ui_info.update_start_placement(|mut j:StartArmyPlacementInfo|{
-            j.num_players = config.player_count as u32;
-            for i in 0..j.num_players as usize{
+        self.ui_info.start_placement.set(self.ui_info.start_placement.get().update(|tmp|{
+
+            tmp.num_players = config.player_count as u32;
+            for i in 0..tmp.num_players as usize{
                 let armies = armies_per_player - self.model.players[i].get_owned_provs(provs).len() as u32;
-                console_log!(format!("founf {} armies for player {}", armies, i));
-                j.armies_per_player[i] = armies;
+                console_log!(format!("found {} armies for player {}", armies, i));
+                tmp.armies_per_player[i] = armies;
             }
-            return j;
-        });
 
-        let data = &self.ui_info.start_placement;
-
-        data.set(data.get().update(|tmp|{
-            tmp.current_player = 2;
         }));
 
         self.draw_board();
-        self.state = GameState::ArmyPlacementStart;
     }
 
-    #[allow(unused_variables)]
-    pub fn lookup_prov_id(&self, prov_id:u32){
-        todo!()
-    }
 
     pub fn get_prov_location_string(&self, coord:&Coord) ->Option<String>{
         let prov_id = self.lookup_coord(coord);
@@ -174,54 +156,74 @@ impl Game {
     pub fn handle_canvas_click(&mut self, clicked_coord :Coord){
         let prov_str = self.get_prov_location_string(&clicked_coord);
         if prov_str.is_some(){
-            put_text_in_out_field(prov_str.unwrap());
+            set_info_field(prov_str.unwrap());
         }else{
-            put_text_in_out_field("".to_owned());
+            set_info_field("".to_owned());
         }
 
-        let prov_id = self.lookup_coord(&clicked_coord);
-        if *self.ui_info.ui_state.get() == UiState::ARMY_PLACEMENT_START{
-            let mut tmp_ui_info = *self.ui_info.start_placement.get();
-            if prov_id.is_some() {
-                let current_armies_available = tmp_ui_info.armies_per_player[tmp_ui_info.current_player as usize];
-                if current_armies_available> 0{
-                    let id = prov_id.unwrap();
-                    self.change_armies_in_prov(1, &id);
-                    tmp_ui_info.armies_per_player[tmp_ui_info.current_player as usize] = current_armies_available -1;
-                    tmp_ui_info.updated = true;
-                    self.ui_info.start_placement.set(tmp_ui_info);
-                    console_log!("placed an army in ", self.model.get_prov_name_from_id(&id));
-                    self.draw_board();
-                }else {
-                    tmp_ui_info.updated = true;
-                    tmp_ui_info.is_done = true;
-                    self.ui_info.start_placement.set(tmp_ui_info);
-                    console_log!("no armies to place");
-                }
+        let prov_id_opt = self.lookup_coord(&clicked_coord);
+        if prov_id_opt.is_some(){
+            let prov_id = prov_id_opt.unwrap();
+            match *self.ui_info.ui_state.get() {
+                UiState::SETUP => {}
+                UiState::ARMY_PLACEMENT_START => self.handle_army_placement(prov_id, true),
+                UiState::ARMY_PLACEMENT => self.handle_army_placement(prov_id, false),
+                UiState::TURN_START => {}
+                UiState::TURN => {}
+                UiState::COMBAT => {}
+                UiState::GAME_END => {}
+                UiState::CARD_SELECT => {}
             }
-        }else  if *self.ui_info.ui_state.get() == UiState::ARMY_PLACEMENT{
-            let mut tmp_ui_info = *self.ui_info.placement.get();
-            if prov_id.is_some() {
-                let current_armies_available = tmp_ui_info.army_count;
-                if current_armies_available> 0{
-                    let id = prov_id.unwrap();
-                    self.change_armies_in_prov(1, &id);
-                    tmp_ui_info.army_count = tmp_ui_info.army_count -1;
-                    tmp_ui_info.updated = true;
-                    self.ui_info.placement.set(tmp_ui_info);
-                    console_log!("placed an army in ", self.model.get_prov_name_from_id(&id));
-                    self.draw_board();
-                }else {
-                    tmp_ui_info.updated = true;
-                    tmp_ui_info.is_done = true;
-                    self.ui_info.placement.set(tmp_ui_info);
-                    console_log!("no armies to place");
-                }
+        }
+    }
+
+    fn handle_army_placement(&mut self, prov_id:u32, placement_start:bool){
+        console_log!(format!("running placement id {}, start {}", prov_id, placement_start));
+        let armies_available:u32 = if placement_start{
+            let tmp = *self.ui_info.start_placement.get();
+            tmp.armies_per_player[tmp.current_player as usize]
+        }else {
+            let tmp = *self.ui_info.placement.get();
+            tmp.army_count
+        };
+
+        let broken_code = false;
+
+        if armies_available > 0{
+            self.change_armies_in_prov(1, &prov_id);
+            if placement_start{
+                self.ui_info.start_placement.set(self.ui_info.start_placement.get().update(|tmp|{
+                    tmp.armies_per_player[tmp.current_player as usize] = armies_available -1;
+                    if broken_code{
+                        if armies_available == 1{
+                            tmp.is_done = true;
+                        }
+                    }
+                }))
+            }else {
+                self.ui_info.placement.set(self.ui_info.placement.get().update(|tmp|{
+                    tmp.army_count = armies_available -1;
+                    if broken_code{
+                        if armies_available == 1{
+                            tmp.is_done = true;
+                        }
+                    }
+                }))
             }
         }else {
-            gloo::console::log!(format!("army state if {:?}", self.ui_info.ui_state.get()))
+            if broken_code{
+                if placement_start{
+                    panic!("in placement state, with 0 armies to place {:?}", self.ui_info.start_placement.get());
+                }else {
+                    panic!("in placement state, with 0 armies to place {:?}", self.ui_info.placement.get());
+                };
+            }else {
+                self.ui_info.start_placement.set(self.ui_info.start_placement.get().update(|tmp|{
+                    tmp.is_done = true;
+                }))
+            }
         }
-
+        self.draw_board();
     }
 
     pub fn nav_tree_end_add(&mut self){
@@ -252,11 +254,6 @@ impl Game {
         }
     }
 
-    pub fn get_free_armies_available_start(&self, player_id:u32) -> u32{
-        let armies_total = Rules::armies_per_players_start(self.model.players.len() as u32).unwrap();
-        let owned = self.model.players[player_id as usize].get_owned_provs(&self.model.provinces).len() as u32;
-        return armies_total - owned;
-    }
 
     pub fn get_ui_info_clone(&self) -> UiInfo{
         return self.ui_info.clone();

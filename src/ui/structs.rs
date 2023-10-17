@@ -1,3 +1,4 @@
+use gloo::console::log;
 use sycamore::prelude::{create_rc_signal, RcSignal};
 use crate::ui::main::UiState;
 use crate::utils::consts::MAX_PLAYERS;
@@ -22,19 +23,11 @@ impl UiInfo {
             placement: create_rc_signal(ArmyPlacementInfo::new()),
         }
     }
-
-    pub fn update_start_placement<F>(&self, f:F)where
-    F:Fn(StartArmyPlacementInfo) -> StartArmyPlacementInfo{
-        let mut tmp = *self.start_placement.get();
-        tmp = f(tmp);
-        tmp.updated = true;
-        self.start_placement.set(tmp);
-    }
 }
 
 
 
-#[derive(Copy, Clone, Eq, PartialEq)]
+#[derive(Copy, Clone, Eq, PartialEq, Debug)]
 pub struct StartArmyPlacementInfo {
     pub is_done: bool,
     pub updated: bool,
@@ -45,10 +38,12 @@ pub struct StartArmyPlacementInfo {
 
 
 impl UiUpdatable for StartArmyPlacementInfo{
-    fn update<F>(self, f: F) -> Self where F: Fn(&mut Self) {
+    fn update<F>(self, f: F) -> Self
+        where F: Fn(&mut Self), Self: Sized {
         let mut tmp = self.clone();
         f(&mut tmp);
         tmp.updated = true;
+        log!(format!("updating start placement info {:?}", tmp.clone()));
         return tmp;
     }
 }
@@ -68,7 +63,7 @@ impl StartArmyPlacementInfo {
 
 
 
-#[derive(Copy, Clone, Eq, PartialEq)]
+#[derive(Copy, Clone, Eq, PartialEq, Debug)]
 pub struct ArmyPlacementInfo {
     pub army_count: u32,
     pub is_done: bool,

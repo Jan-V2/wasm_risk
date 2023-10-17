@@ -25,7 +25,7 @@ pub fn get_element_by_id(id :&str) -> Element{
 }
 
 
-pub fn put_text_in_out_field(string:String){
+pub fn set_info_field(string:String){
     let elem = get_element_by_id("text_out").dyn_into::<HtmlLabelElement>()
         .map_err(|_| ()).unwrap();
     elem.set_inner_text(&format!("{}", string));

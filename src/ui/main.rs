@@ -1,6 +1,7 @@
 use std::cell::RefCell;
 use sycamore::prelude::*;
 use std::rc::Rc;
+use gloo::console::log;
 use crate::game::Game;
 use crate::ui::player_setup::*;
 use crate::ui::structs::{ArmyPlacementInfo, StartArmyPlacementInfo, UiUpdatable};
@@ -58,20 +59,24 @@ pub fn UiSide<G: Html>(cx: Scope, props: UiMainProps) -> View<G> {
     });
 
     let _ = create_memo(cx, move || {
+        log!("checking eq");
         if *info_placement_start_rc.get() != *army_placement_start_sig.get() {
-            if army_placement_start_sig.get().updated {
-                let mut tmp = *army_placement_start_sig.get();
-                tmp.updated = false;
-                info_placement_start_rc.set(tmp.clone());
-                army_placement_start_sig.set(tmp);
+            let mut tmp = if army_placement_start_sig.get().updated {
+                log!("updating placement start from sig");
+                *army_placement_start_sig.get()
             } else {
-                let mut tmp = *info_placement_start_rc.get();
-                tmp.updated = false;
-                army_placement_start_sig.set(tmp.clone());
-                info_placement_start_rc.set(tmp);
-            }
+                log!("updating placement start from rc");
+                *info_placement_start_rc.get()
+            };
+            tmp.updated = false;
+            info_placement_start_rc.set(tmp.clone());
+            army_placement_start_sig.set(tmp);
+            army_placement_start_sig.trigger_subscribers();
+        } else {
+            log!("no diff")
         }
     });
+
 
     let _ = create_memo(cx, move || {
         if *ui_state_rc.get() != *ui_state.get() {
@@ -152,20 +157,39 @@ pub fn ArmyPlacementStart<'a, G: Html>(cx: Scope<'a>,
                                        ui_info: &'a Signal<StartArmyPlacementInfo>,
 ) -> View<G> {
     gloo::console::log!("running place start");
+    let is_broken = false;
 
-    let _ = create_memo(cx, move || {
-        if ui_info.get().armies_per_player[ui_info.get().current_player as usize] == 0 {
-            if ui_info.get().current_player + 1 < ui_info.get().num_players {
-                let mut tmp = *ui_info.get();
-                tmp.updated = true;
-                tmp.current_player = tmp.current_player + 1;
-                tmp.is_done = false;
-                ui_info.set(tmp);
-            } else {
-                ui_state.set(UiState::ARMY_PLACEMENT)
+    if is_broken {
+        let _ = create_memo(cx, move || {
+            let mut _ui_info = *ui_info.get();
+            if _ui_info.armies_per_player[_ui_info.current_player as usize] == 0 {
+                if _ui_info.current_player + 1 < _ui_info.num_players {
+                    ui_info.set(ui_info.get().update(|s| {
+                        s.current_player = s.current_player + 1;
+                        s.is_done = false;
+                        log!("updating current player");
+                    }));
+                } else {
+                    ui_state.set(UiState::ARMY_PLACEMENT)
+                }
             }
-        }
-    });
+        });
+    } else {
+        let _ = create_memo(cx, move || {
+            if ui_info.get().is_done {
+                if ui_info.get().current_player + 1 < ui_info.get().num_players {
+                    let mut tmp = *ui_info.get();
+                    tmp.updated = true;
+                    tmp.current_player = tmp.current_player + 1;
+                    tmp.is_done = false;
+                    ui_info.set(tmp);
+                } else {
+                    ui_state.set(UiState::ARMY_PLACEMENT)
+                }
+            }
+        });
+    }
+
 
     view! {cx,
             h1{"Player " (ui_info.get().current_player + 1 )}
