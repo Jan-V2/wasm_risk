@@ -899,6 +899,3 @@ pub fn get_navtree_data() ->String{
     return data.to_string();
 }
 
-pub fn get_colors_array() -> [&'static str; 6] {
-    ["CadetBlue", "DarkOrchid", "DarkKhaki", "LimeGreen", "OrangeRed", "PeachPuff"]
-}

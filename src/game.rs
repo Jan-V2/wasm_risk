@@ -41,7 +41,8 @@ pub struct Game {
     pub model:Model,
     prov_lookup:ProvLookupTable,
     flag_scale:f64,
-    ui_info:UiInfo
+    ui_info:Option<UiInfo>
+
 }
 
 
@@ -51,8 +52,12 @@ impl Game {
             model:Model::new_from_json(),
             prov_lookup,
             flag_scale: 0.5,
-            ui_info: UiInfo::new()
+            ui_info: None
         }
+    }
+
+    fn ui_info_ref(&self) -> &UiInfo {
+        self.ui_info.as_ref().unwrap()
     }
 
     pub fn draw_board(&self){
@@ -90,7 +95,7 @@ impl Game {
         self.assign_provs_random();
 
         let provs = &self.model.provinces;
-        self.ui_info.start_placement.set(self.ui_info.start_placement.get().update(|tmp|{
+        self.ui_info_ref().start_placement.set(self.ui_info_ref().start_placement.get().update(|tmp|{
 
             tmp.num_players = config.player_count as u32;
             for i in 0..tmp.num_players as usize{
@@ -164,7 +169,7 @@ impl Game {
         let prov_id_opt = self.lookup_coord(&clicked_coord);
         if prov_id_opt.is_some(){
             let prov_id = prov_id_opt.unwrap();
-            match self.ui_info.ui_state.get() {
+            match self.ui_info_ref().ui_state.get() {
                 UiState::SETUP => {}
                 UiState::ARMY_PLACEMENT_START => self.handle_army_placement(prov_id, true),
                 UiState::ARMY_PLACEMENT => self.handle_army_placement(prov_id, false),
@@ -180,10 +185,10 @@ impl Game {
     fn handle_army_placement(&mut self, prov_id:u32, placement_start:bool){
         console_log!(format!("running placement id {}, start {}", prov_id, placement_start));
         let armies_available:u32 = if placement_start{
-            let tmp = self.ui_info.start_placement.get();
+            let tmp = self.ui_info_ref().start_placement.get();
             tmp.armies_per_player[tmp.current_player as usize]
         }else {
-            let tmp = self.ui_info.placement.get();
+            let tmp = self.ui_info_ref().placement.get();
             tmp.army_count
         };
 
@@ -192,7 +197,7 @@ impl Game {
         if armies_available > 0{
             self.change_armies_in_prov(1, &prov_id);
             if placement_start{
-                self.ui_info.start_placement.set(self.ui_info.start_placement.get().update(|tmp|{
+                self.ui_info_ref().start_placement.set(self.ui_info_ref().start_placement.get().update(|tmp|{
                     tmp.armies_per_player[tmp.current_player as usize] = armies_available -1;
                     if broken_code{
                         if armies_available == 1{
@@ -201,7 +206,7 @@ impl Game {
                     }
                 }))
             }else {
-                self.ui_info.placement.set(self.ui_info.placement.get().update(|tmp|{
+                self.ui_info_ref().placement.set(self.ui_info_ref().placement.get().update(|tmp|{
                     tmp.army_count = armies_available -1;
                     if broken_code{
                         if armies_available == 1{
@@ -213,12 +218,12 @@ impl Game {
         }else {
             if broken_code{
                 if placement_start{
-                    panic!("in placement state, with 0 armies to place {:?}", self.ui_info.start_placement.get());
+                    panic!("in placement state, with 0 armies to place {:?}", self.ui_info_ref().start_placement.get());
                 }else {
-                    panic!("in placement state, with 0 armies to place {:?}", self.ui_info.placement.get());
+                    panic!("in placement state, with 0 armies to place {:?}", self.ui_info_ref().placement.get());
                 };
             }else {
-                self.ui_info.start_placement.set(self.ui_info.start_placement.get().update(|tmp|{
+                self.ui_info_ref().start_placement.set(self.ui_info_ref().start_placement.get().update(|tmp|{
                     tmp.is_done = true;
                 }))
             }
@@ -255,8 +260,8 @@ impl Game {
     }
 
 
-    pub fn get_ui_info_clone(&self) -> UiInfo{
-        return self.ui_info.clone();
+    pub fn set_ui_info(&mut self, info:UiInfo){
+        self.ui_info = Some(info);
     }
 
 }

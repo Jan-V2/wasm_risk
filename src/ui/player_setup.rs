@@ -3,10 +3,9 @@ use sycamore::prelude::*;
 use std::rc::Rc;
 use wasm_bindgen::JsCast;
 use web_sys::{Event, HtmlInputElement, HtmlSelectElement};
-use crate::data_include::get_colors_array;
 use crate::game::Game;
 use crate::ui::main::UiState;
-use crate::utils::consts::MAX_PLAYERS;
+use crate::utils::consts::{MAX_PLAYERS, PLAYER_COLORS};
 
 
 #[derive(Debug, Clone, Copy)]
@@ -73,10 +72,9 @@ pub fn Color_Setup< G: Html>( props: PlayerConfigProps) -> View<G> {
         tmp_player_config.player_colors.set(tmp_colors);
         props.data.set(tmp_player_config);
     };
-    let colors = get_colors_array();
 
     let options:View<G> = View::new_fragment(
-        colors.iter().map(|color| view! {
+        PLAYER_COLORS.iter().map(|color| view! {
             option(value=color ) { (color) } }
         ).collect()
     );
@@ -120,8 +118,11 @@ pub fn PlayersSetup< G : Html>( props:PlayersSetupProps) -> View<G> {
             let mut validated = true;
             let mut _return  = false;
 
-            for color in &tmp_player_config.player_colors.get_clone(){
-                if color  == "empty"{
+            let player_colors = &tmp_player_config.player_colors.get_clone();
+            let num_players = tmp_player_config.player_count as usize;
+
+            for i  in 0..num_players {
+                if player_colors[i]  == "empty"{
                     validated = false;
                     break;
                 }
@@ -129,14 +130,14 @@ pub fn PlayersSetup< G : Html>( props:PlayersSetupProps) -> View<G> {
 
             if !validated{
                 if !_return{
-                    error_msg_sig.set("All color fields have a color".to_string());
+                    error_msg_sig.set("Not all players have picked a color".to_string());
                     _return = true;
                 }
             }else{
                 let mut found:Vec<String> = Vec::new();
-                for color in &tmp_player_config.player_colors.get_clone(){
-                    if !found.contains(color){
-                        found.push(color.clone());
+                for i in 0..num_players{
+                    if !found.contains(&player_colors[i]){
+                        found.push(player_colors[i].clone());
                     }else{
                         validated = false;
                         break;
@@ -145,7 +146,7 @@ pub fn PlayersSetup< G : Html>( props:PlayersSetupProps) -> View<G> {
             }
             if !validated{
                 if !_return{
-                    error_msg_sig.set("All players must have diiferent colors".to_string());
+                    error_msg_sig.set("All players must have different colors".to_string());
                     _return = true;
                 }
             }else{
@@ -157,7 +158,7 @@ pub fn PlayersSetup< G : Html>( props:PlayersSetupProps) -> View<G> {
     };
 
 
-    let player_options:View<G> = View::new_fragment(
+    let player_options:Signal<View<G>> = create_signal(View::new_fragment(
         (min_players..max_players + 1).map(|x| view! {
             option(value=x, on:click= move |_| {
                 let mut tmp_player_config = (player_config_sig.get()).clone();
@@ -165,7 +166,8 @@ pub fn PlayersSetup< G : Html>( props:PlayersSetupProps) -> View<G> {
                 player_config_sig.set(tmp_player_config);
         }) { (x) } }
         ).collect()
-    );
+    ));
+
 
     let player_config_iter_sig = create_memo( move||{
         let ret:Vec<i32> = (1..(player_config_sig.get()).player_count + 1).collect();
@@ -178,7 +180,7 @@ pub fn PlayersSetup< G : Html>( props:PlayersSetupProps) -> View<G> {
             view! {
                 select( class="form-select", style="width: fit-content") {
                     option(){"Choose the number of players"}
-                    (player_options)
+                    (player_options.get_clone())
             }}
         } else {
             view! {

@@ -4,7 +4,7 @@ use std::rc::Rc;
 use gloo::console::log;
 use crate::game::Game;
 use crate::ui::player_setup::*;
-use crate::ui::structs::{ArmyPlacementInfo, StartArmyPlacementInfo, UiUpdatable};
+use crate::ui::structs::{ArmyPlacementInfo, StartArmyPlacementInfo, UiInfo, UiUpdatable};
 
 
 #[allow(non_camel_case_types)]
@@ -28,7 +28,8 @@ pub struct UiMainProps {
 
 #[component]
 pub fn UiSide<G: Html>(props: UiMainProps) -> View<G> {
-    let ui_info_struct = props.game_ref.get_clone().borrow().get_ui_info_clone();
+    let ui_info_struct = UiInfo::new();
+    props.game_ref.get_clone().borrow_mut().set_ui_info(ui_info_struct.clone());
     let info_placement_rc = ui_info_struct.placement.clone();
     let info_placement_start_rc = ui_info_struct.start_placement.clone();
     let ui_state_rc = ui_info_struct.ui_state.clone();

@@ -14,10 +14,10 @@ use crate::canvas::{get_map_lookup_data};
 use crate::game::Game;
 use sycamore;
 use crate::element_getters::get_element_by_id;
-use crate::ui::main::{ UiMainProps};
+use crate::ui::main::{UiMainProps, UiState};
 use gloo::console::log as console_log;
 use sycamore::prelude::create_signal;
-
+use crate::ui::structs::{ArmyPlacementInfo, StartArmyPlacementInfo};
 
 
 #[wasm_bindgen(start)]
@@ -30,7 +30,6 @@ fn setup() {
     console_log!("starting");
     let game = Game::new(get_map_lookup_data(50));
     //update_prov_data();
-
 
 
     let refc_game = Rc::from(RefCell::from(game));
