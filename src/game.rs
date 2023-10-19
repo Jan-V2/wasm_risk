@@ -16,8 +16,18 @@ pub struct ProvLookupTable {
 }
 
 impl ProvLookupTable{
+    fn get_flat_ind(&self, coord:&Coord) -> usize{
+        return (coord.x + coord.y * self.width as i32) as usize;
+    }
+
+    pub fn target_is_valid(&self, coord:&Coord)->bool{
+        // refocusing and other actions can produce canvas events with locations outside the canvas
+        let idx = self.get_flat_ind(coord);
+        return idx < self.pixels.len();
+    }
+
     fn get_coord (&self, coord: &Coord) -> [u8; 3] {
-        let idx = (coord.x + coord.y * self.width as i32) as usize;
+        let idx = self.get_flat_ind(coord);
         return self.pixels[idx];
     }
 
@@ -132,6 +142,10 @@ impl Game {
 
     pub fn lookup_coord(&self, clicked_coord:&Coord)-> Option<u32>{
         let mut found_at_idx:Vec<i32> = Vec::new();
+
+        if !self.prov_lookup.target_is_valid(clicked_coord){
+            return None;
+        }
 
         for i in 0..self.model.provinces.len(){
             if self.prov_lookup.compare_colors(&self.model.provinces[i].location, &clicked_coord) {
