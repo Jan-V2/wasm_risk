@@ -13,10 +13,10 @@ use wasm_bindgen::prelude::*;
 use crate::canvas::{get_map_lookup_data};
 use crate::game::Game;
 use sycamore;
-use sycamore::prelude::Scope;
 use crate::element_getters::get_element_by_id;
 use crate::ui::main::{ UiMainProps};
 use gloo::console::log as console_log;
+use sycamore::prelude::create_signal;
 
 
 
@@ -37,10 +37,10 @@ fn setup() {
     canvas::ui_init_canvas(refc_game.clone());
     //html_elem_setup::setup_tree_builder_btns(refc_game.clone());
 
-    let cloj = |cx:Scope| {
+    let cloj = || {
 
-        ui::main::UiSide(cx, UiMainProps{
-            game_ref: refc_game
+        ui::main::UiSide(UiMainProps{
+            game_ref: create_signal(refc_game)
         })
     };
     sycamore::render_to(cloj, &get_element_by_id("main"));

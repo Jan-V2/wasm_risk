@@ -82,7 +82,7 @@ impl Game {
             self.model.players.push(Player{
                 id: i as u32,
                 cards: vec![],
-                color: config.player_colors[i as usize].clone(),
+                color: "".to_string(),//config.player_colors[i as usize].clone(),
                 is_computer: config.player_is_ai[i as usize],
             })
         }
@@ -164,7 +164,7 @@ impl Game {
         let prov_id_opt = self.lookup_coord(&clicked_coord);
         if prov_id_opt.is_some(){
             let prov_id = prov_id_opt.unwrap();
-            match *self.ui_info.ui_state.get() {
+            match self.ui_info.ui_state.get() {
                 UiState::SETUP => {}
                 UiState::ARMY_PLACEMENT_START => self.handle_army_placement(prov_id, true),
                 UiState::ARMY_PLACEMENT => self.handle_army_placement(prov_id, false),
@@ -180,10 +180,10 @@ impl Game {
     fn handle_army_placement(&mut self, prov_id:u32, placement_start:bool){
         console_log!(format!("running placement id {}, start {}", prov_id, placement_start));
         let armies_available:u32 = if placement_start{
-            let tmp = *self.ui_info.start_placement.get();
+            let tmp = self.ui_info.start_placement.get();
             tmp.armies_per_player[tmp.current_player as usize]
         }else {
-            let tmp = *self.ui_info.placement.get();
+            let tmp = self.ui_info.placement.get();
             tmp.army_count
         };
 

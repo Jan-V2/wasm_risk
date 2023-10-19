@@ -1,5 +1,5 @@
 use gloo::console::log;
-use sycamore::prelude::{create_rc_signal, RcSignal};
+use sycamore::prelude::{create_signal, Signal};
 use crate::ui::main::UiState;
 use crate::utils::consts::MAX_PLAYERS;
 
@@ -8,19 +8,19 @@ pub trait UiUpdatable {
         where F: Fn(&mut Self),  Self: Sized;
 }
 
-#[derive(Clone)]
+#[derive(Clone, Copy)]
 pub struct UiInfo{
-    pub ui_state: RcSignal<UiState>,
-    pub start_placement:RcSignal<StartArmyPlacementInfo>,
-    pub placement:RcSignal<ArmyPlacementInfo>,
+    pub ui_state: Signal<UiState>,
+    pub start_placement:Signal<StartArmyPlacementInfo>,
+    pub placement:Signal<ArmyPlacementInfo>,
 }
 
 impl UiInfo {
     pub fn new()->UiInfo{
         UiInfo{
-            ui_state:create_rc_signal(UiState::SETUP),
-            start_placement: create_rc_signal(StartArmyPlacementInfo::new()),
-            placement: create_rc_signal(ArmyPlacementInfo::new()),
+            ui_state:create_signal(UiState::SETUP),
+            start_placement: create_signal(StartArmyPlacementInfo::new()),
+            placement: create_signal(ArmyPlacementInfo::new()),
         }
     }
 }
