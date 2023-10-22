@@ -30,75 +30,28 @@ pub struct UiMainProps {
 pub fn UiSide<G: Html>(props: UiMainProps) -> View<G> {
     let ui_info_struct = UiInfo::new();
     props.game_ref.get_clone().borrow_mut().set_ui_info(ui_info_struct.clone());
-    let info_placement_rc = ui_info_struct.placement.clone();
-    let info_placement_start_rc = ui_info_struct.start_placement.clone();
-    let ui_state_rc = ui_info_struct.ui_state.clone();
+    let placement_sig = ui_info_struct.placement.clone();
+    let placement_start_sig = ui_info_struct.start_placement.clone();
+    let ui_state_sig = ui_info_struct.ui_state.clone();
 
-
-    let ui_state: Signal<UiState> = create_signal( UiState::SETUP);
     let arg_ref = props.game_ref.clone();
 
 
-    let army_placement_sig = create_signal(ui_info_struct.placement.get().clone());
-    let army_placement_start_sig = create_signal(ui_info_struct.start_placement.get().clone());
-
-
-    let _ = create_memo(move || {
-        if info_placement_rc.get() != army_placement_sig.get() {
-            if army_placement_sig.get().updated {
-                let mut tmp = army_placement_sig.get();
-                tmp.updated = false;
-                info_placement_rc.set(tmp.clone());
-                army_placement_sig.set(tmp);
-            } else {
-                let mut tmp = info_placement_rc.get();
-                tmp.updated = false;
-                army_placement_sig.set(tmp.clone());
-                info_placement_rc.set(tmp);
-            }
-        }
-    });
-
-    let _ = create_memo(move || {
-        log!("checking eq");
-        if info_placement_start_rc.get() != army_placement_start_sig.get() {
-            let mut tmp = if army_placement_start_sig.get().updated {
-                log!("updating placement start from sig");
-                army_placement_start_sig.get()
-            } else {
-                log!("updating placement start from rc");
-                info_placement_start_rc.get()
-            };
-            tmp.updated = false;
-            info_placement_start_rc.set(tmp.clone());
-            army_placement_start_sig.set(tmp);
-        } else {
-            log!("no diff")
-        }
-    });
-
-
-    let _ = create_memo( move || {
-        if ui_state_rc.get() != ui_state.get() {
-            ui_state_rc.set(ui_state.get());
-        }
-    });
-
-
     view! { div {
-        (if  ui_state.get() == UiState::SETUP {
+        h1{}
+        (if  ui_state_sig.get() == UiState::SETUP {
             view!{
-                PlayersSetup(game_ref=arg_ref.get_clone(), ui_state=ui_state)
+                PlayersSetup(game_ref=arg_ref.get_clone(), ui_state=ui_state_sig)
             }
-        }else if ui_state.get() == UiState::ARMY_PLACEMENT_START{
+        }else if ui_state_sig.get() == UiState::ARMY_PLACEMENT_START{
             view!{
-                ArmyPlacementStart(ui_state=ui_state, ui_info=army_placement_start_sig)
+                ArmyPlacementStart(ui_state=ui_state_sig, ui_info=placement_start_sig)
             }
-        }else if ui_state.get() == UiState::ARMY_PLACEMENT  {
+        }else if ui_state_sig.get() == UiState::ARMY_PLACEMENT  {
             view!{
-                Turn_Ui(army_num=9u32, player_id=1u32, ui_state=ui_state, ui_info=army_placement_sig)
+                Turn_Ui(army_num=9u32, player_id=1u32, ui_state=ui_state_sig, ui_info=placement_sig)
             }
-        }else if ui_state.get() == UiState::GAME_END{
+        }else if ui_state_sig.get() == UiState::GAME_END{
             view!{
                 div { "game end" }
             }
@@ -151,43 +104,29 @@ pub fn ArmyPlacementUi< G: Html>(ui_info: Signal<ArmyPlacementInfo>, ) -> View<G
 
 #[component(inline_props)]
 pub fn ArmyPlacementStart<G: Html>(
-                                       ui_state: Signal<UiState>,
-                                       ui_info: Signal<StartArmyPlacementInfo>,
+    ui_state: Signal<UiState>,
+    ui_info: Signal<StartArmyPlacementInfo>,
 ) -> View<G> {
+    let cause_crash = true;
+
     gloo::console::log!("running place start");
-    let is_broken = false;
-
-    if is_broken {
-        let _ = create_memo(move || {
-            let mut _ui_info = ui_info.get();
-            if _ui_info.armies_per_player[_ui_info.current_player as usize] == 0 {
-                if _ui_info.current_player + 1 < _ui_info.num_players {
-                    ui_info.set(ui_info.get().update(|s| {
-                        s.current_player = s.current_player + 1;
-                        s.is_done = false;
-                        log!("updating current player");
-                    }));
-                } else {
-                    ui_state.set(UiState::ARMY_PLACEMENT)
+    create_effect(move || {
+        let mut _ui_info = ui_info.get();
+        if _ui_info.armies_per_player[_ui_info.current_player as usize] == 0 {
+            if _ui_info.current_player + 1 < _ui_info.num_players {
+                ui_info.set(ui_info.get().update(|s| {
+                    s.current_player = s.current_player + 1;
+                    s.is_done = false;
+                    log!("updating current player");
+                }));
+            } else {
+                log!("updating ui state");
+                if cause_crash{
+                    ui_state.set(UiState::GAME_END);  // <- this lines causes a panic
                 }
             }
-        });
-    } else {
-        let _ = create_memo( move || {
-            if ui_info.get().is_done {
-                if ui_info.get().current_player + 1 < ui_info.get().num_players {
-                    let mut tmp = ui_info.get();
-                    tmp.updated = true;
-                    tmp.current_player = tmp.current_player + 1;
-                    tmp.is_done = false;
-                    ui_info.set(tmp);
-                } else {
-                    ui_state.set(UiState::ARMY_PLACEMENT)
-                }
-            }
-        });
-    }
-
+        }
+    });
 
     view! {
             h1{"Player " (ui_info.get().current_player + 1 )}
