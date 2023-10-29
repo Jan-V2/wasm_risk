@@ -7,7 +7,6 @@ use crate::game::Game;
 use crate::ui::main::UiState;
 use crate::utils::consts::{MAX_PLAYERS, PLAYER_COLORS};
 
-
 #[derive(Debug, Clone, Copy)]
 pub struct PlayerConfig{
     pub player_count:i32,
@@ -137,7 +136,9 @@ pub fn PlayersSetup< G : Html>( props:PlayersSetupProps) -> View<G> {
                 let mut found:Vec<String> = Vec::new();
                 for i in 0..num_players{
                     if !found.contains(&player_colors[i]){
+
                         found.push(player_colors[i].clone());
+
                     }else{
                         validated = false;
                         break;

@@ -54,6 +54,9 @@ pub struct Game {
 }
 
 
+
+
+
 impl Game {
     pub fn new(prov_lookup: ProvLookupTable) -> Game {
         return Game {
@@ -95,7 +98,7 @@ impl Game {
             self.model.players.push(Player {
                 id: i as u32,
                 cards: vec![],
-                color: "".to_string(),//config.player_colors[i as usize].clone(),
+                color: config.player_colors.get_clone()[i as usize].as_str().clone().to_string(),
                 is_computer: config.player_is_ai[i as usize],
             })
         }
