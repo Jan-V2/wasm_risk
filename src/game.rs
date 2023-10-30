@@ -54,9 +54,6 @@ pub struct Game {
 }
 
 
-
-
-
 impl Game {
     pub fn new(prov_lookup: ProvLookupTable) -> Game {
         return Game {

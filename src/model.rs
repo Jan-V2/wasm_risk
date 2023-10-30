@@ -5,9 +5,6 @@ use serde::{Deserialize, Serialize};
 use crate::data_include::{ get_map_data, get_navtree_data};
 
 
-
-
-
 pub struct Model{
     pub provinces:Vec<Province>,
     pub nav_tree:NavTree,

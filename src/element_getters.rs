@@ -1,7 +1,7 @@
 #![allow(dead_code)]
 
 use wasm_bindgen::prelude::*;
-use web_sys::{CanvasRenderingContext2d, Element, HtmlButtonElement, HtmlCanvasElement, HtmlInputElement, HtmlLabelElement};
+use web_sys::{CanvasRenderingContext2d, Document, Element, HtmlButtonElement, HtmlCanvasElement, HtmlDivElement, HtmlElement, HtmlInputElement, HtmlLabelElement, MouseEvent};
 
 
 pub fn get_html_label_by_id(id :&str) -> HtmlLabelElement{
@@ -19,11 +19,18 @@ pub fn get_button_by_id(id :&str) -> HtmlButtonElement{
         .unwrap();
 }
 
-pub fn get_element_by_id(id :&str) -> Element{
-    let document = web_sys::window().unwrap().document().unwrap();
-    return document.get_element_by_id(id).unwrap();
+pub fn get_document()->Document{
+    web_sys::window().unwrap().document().unwrap()
 }
 
+pub fn get_element_by_id(id :&str) -> Element{
+    let document = get_document();
+    let res = document.get_element_by_id(id);
+    if res.is_none(){
+        panic!("could not find element with id {}", id);
+    }
+    res.unwrap()
+}
 
 pub fn set_info_field(string:String){
     let elem = get_element_by_id("text_out").dyn_into::<HtmlLabelElement>()
@@ -48,4 +55,31 @@ pub fn get_drawing_context(canvas :&HtmlCanvasElement) -> CanvasRenderingContext
         .unwrap()
         .dyn_into::<web_sys::CanvasRenderingContext2d>()
         .unwrap();
+}
+
+
+pub fn create_new_html(document:&Document)->HtmlElement{
+    document.create_element("html").unwrap().dyn_into().unwrap()
+}
+
+pub fn create_new_button(document:&Document)->HtmlButtonElement{
+    document.create_element("button").unwrap().dyn_into().unwrap()
+}
+
+pub fn create_new_div(document:&Document)->HtmlDivElement{
+    document.create_element("div").unwrap().dyn_into().unwrap()
+}
+
+pub fn create_new_label(document:&Document)->HtmlLabelElement{
+    document.create_element("label").unwrap().dyn_into().unwrap()
+}
+
+pub fn attach_handler_to_btn(btn:&HtmlButtonElement, event_type:&str, clojure: Box<dyn FnMut(MouseEvent)>){
+    let closure_start = Closure::<dyn FnMut(_)>::new(clojure);
+    let res = btn.add_event_listener_with_callback(
+        event_type, closure_start.as_ref().unchecked_ref());
+    closure_start.forget();
+    if res.is_err(){
+        panic!("could not attach handler of type {} to btn with id: {}", event_type, btn.id())
+    }
 }
