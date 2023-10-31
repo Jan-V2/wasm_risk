@@ -222,9 +222,9 @@ impl Game {
             }
         } else {
             /*if placement_start {
-                panic!("in placement state, with 0 armies to place {:?}", self.ui_info_ref().start_placement.get());
+                panic!("in placement state, with 0 armies to Place {:?}", self.ui_info_ref().start_placement.get());
             } else {
-                panic!("in placement state, with 0 armies to place {:?}", self.ui_info_ref().placement.get());
+                panic!("in placement state, with 0 armies to Place {:?}", self.ui_info_ref().placement.get());
             };*/
         }
         self.draw_board();

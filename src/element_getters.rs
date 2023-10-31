@@ -1,7 +1,7 @@
 #![allow(dead_code)]
 
 use wasm_bindgen::prelude::*;
-use web_sys::{CanvasRenderingContext2d, Document, Element, HtmlButtonElement, HtmlCanvasElement, HtmlDivElement, HtmlElement, HtmlInputElement, HtmlLabelElement, MouseEvent};
+use web_sys::{CanvasRenderingContext2d, Document, Element, HtmlButtonElement, HtmlCanvasElement, HtmlInputElement, HtmlLabelElement, MouseEvent};
 
 
 pub fn get_html_label_by_id(id :&str) -> HtmlLabelElement{
@@ -58,20 +58,9 @@ pub fn get_drawing_context(canvas :&HtmlCanvasElement) -> CanvasRenderingContext
 }
 
 
-pub fn create_new_html(document:&Document)->HtmlElement{
-    document.create_element("html").unwrap().dyn_into().unwrap()
-}
-
-pub fn create_new_button(document:&Document)->HtmlButtonElement{
-    document.create_element("button").unwrap().dyn_into().unwrap()
-}
-
-pub fn create_new_div(document:&Document)->HtmlDivElement{
-    document.create_element("div").unwrap().dyn_into().unwrap()
-}
-
-pub fn create_new_label(document:&Document)->HtmlLabelElement{
-    document.create_element("label").unwrap().dyn_into().unwrap()
+pub fn create_new_elem<T>(document:&Document, elem_name: &str)->T
+        where T:JsCast{
+    document.create_element(elem_name).unwrap().dyn_into().unwrap()
 }
 
 pub fn attach_handler_to_btn(btn:&HtmlButtonElement, event_type:&str, clojure: Box<dyn FnMut(MouseEvent)>){

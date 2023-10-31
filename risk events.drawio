@@ -43,7 +43,7 @@
         <mxCell id="j8NAKuWzRgl3xFltfP5k-32" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="j8NAKuWzRgl3xFltfP5k-19" target="j8NAKuWzRgl3xFltfP5k-30">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="j8NAKuWzRgl3xFltfP5k-19" value="&lt;div&gt;place starting&amp;nbsp;&lt;/div&gt;&lt;div&gt;armies&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+        <mxCell id="j8NAKuWzRgl3xFltfP5k-19" value="&lt;div&gt;Place starting&amp;nbsp;&lt;/div&gt;&lt;div&gt;armies&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
           <mxGeometry x="-300" y="390" width="120" height="60" as="geometry" />
         </mxCell>
         <mxCell id="j8NAKuWzRgl3xFltfP5k-20" value="display change" style="shape=parallelogram;perimeter=parallelogramPerimeter;whiteSpace=wrap;html=1;fixedSize=1;" vertex="1" parent="1">
@@ -99,7 +99,7 @@
         <mxCell id="j8NAKuWzRgl3xFltfP5k-33" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.623;exitY=1.003;exitDx=0;exitDy=0;exitPerimeter=0;" edge="1" parent="1" source="j8NAKuWzRgl3xFltfP5k-34" target="j8NAKuWzRgl3xFltfP5k-35">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="j8NAKuWzRgl3xFltfP5k-34" value="place armies" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+        <mxCell id="j8NAKuWzRgl3xFltfP5k-34" value="Place armies" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
           <mxGeometry x="80" y="570" width="120" height="60" as="geometry" />
         </mxCell>
         <mxCell id="j8NAKuWzRgl3xFltfP5k-35" value="display change" style="shape=parallelogram;perimeter=parallelogramPerimeter;whiteSpace=wrap;html=1;fixedSize=1;" vertex="1" parent="1">
@@ -122,7 +122,7 @@
         <mxCell id="j8NAKuWzRgl3xFltfP5k-60" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="j8NAKuWzRgl3xFltfP5k-44" target="j8NAKuWzRgl3xFltfP5k-59">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="j8NAKuWzRgl3xFltfP5k-44" value="place reinforcing armies" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+        <mxCell id="j8NAKuWzRgl3xFltfP5k-44" value="Place reinforcing armies" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
           <mxGeometry x="90" y="390" width="120" height="60" as="geometry" />
         </mxCell>
         <mxCell id="j8NAKuWzRgl3xFltfP5k-78" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1">
