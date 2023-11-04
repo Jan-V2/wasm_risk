@@ -1,6 +1,6 @@
 
-use wasm_bindgen::JsValue;
-use web_sys::{CssStyleDeclaration, Document, HtmlButtonElement, HtmlElement, HtmlLabelElement, MouseEvent, Node};
+use wasm_bindgen::{Clamped, JsValue};
+use web_sys::{CssStyleDeclaration, Document, HtmlButtonElement, HtmlElement, HtmlImageElement, HtmlLabelElement, MouseEvent, Node};
 use crate::element_getters::{create_new_elem, get_element_by_id, attach_handler_to_btn};
 use crate::ui::traits::*;
 
@@ -48,6 +48,18 @@ impl WrapBtn {
         ret
     }
 }
+
+pub struct WrapImage{
+    elem:HtmlImageElement,
+    id:String,
+}
+
+impl WrapImage{
+    pub fn set(&mut self, img_data:Clamped<Vec<u8>>, width:u32){
+        //self.elem.putI
+    }
+}
+
 
 pub struct WrapHtml {
     template:String,
@@ -110,6 +122,17 @@ impl HTMLable for WrapLabel {
 }
 
 impl HTMLable for WrapBtn{
+    fn mount(&self) {
+        chk_append_child(self.id.as_str(), &self.elem);
+    }
+
+    fn set_visibilty(&mut self, is_visible: bool) {
+        chk_set_visbility(&self.elem.style(), is_visible)
+    }
+}
+
+
+impl HTMLable for WrapImage{
     fn mount(&self) {
         chk_append_child(self.id.as_str(), &self.elem);
     }

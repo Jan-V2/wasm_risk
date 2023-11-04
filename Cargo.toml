@@ -22,6 +22,8 @@ gloo = "0.10.0"
 sycamore = {version = "0.9.0-beta.2", features = ["wasm-bindgen", "web", "web-sys", "sycamore-web"]}
 shrinkwraprs = "0.3.0"
 tracing-wasm = "0.2.1"
+wasm-bindgen-futures = "0.4.38"
+futures = "0.3.28"
 
 
 [dependencies.web-sys]
@@ -29,4 +31,4 @@ version = "0.3.4"
 features = ["CanvasRenderingContext2d", "Document", "Element", "HtmlCanvasElement", "Window",
     "MouseEvent", "HtmlDivElement", "HtmlLabelElement", "HtmlImageElement", "HtmlButtonElement",
     "HtmlInputElement", "HtmlSpanElement", "ImageData", "Node", "HtmlSelectElement",
-    "CssStyleDeclaration", "Crypto"]
+    "CssStyleDeclaration", "Crypto", "ImageBitmap"]

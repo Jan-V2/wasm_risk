@@ -1,7 +1,9 @@
 use std::cell::RefCell;
 use std::rc::Rc;
+use wasm_bindgen::Clamped;
 use wasm_bindgen::prelude::*;
-use web_sys::{CanvasRenderingContext2d, HtmlCanvasElement, HtmlImageElement, MouseEvent};
+use wasm_bindgen_futures::{JsFuture, spawn_local};
+use web_sys::{CanvasRenderingContext2d, HtmlCanvasElement, HtmlImageElement, ImageBitmap, ImageData, MouseEvent};
 use crate::element_getters::*;
 use crate::game::{Game, ProvLookupTable};
 use crate::model::{Coord, Model, Province};
@@ -165,7 +167,96 @@ fn draw_board_raw(canvas: &HtmlCanvasElement, context: &CanvasRenderingContext2d
     context.fill();
     let image = get_element_by_id("board_2").dyn_into::<HtmlImageElement>()
         .map_err(|_| ()).unwrap();
+
     let _ = context.draw_image_with_html_image_element_and_dw_and_dh(&image, 0f64, 0f64,
                                                                      canvas.width() as f64, canvas.height() as f64);
 }
 
+pub struct DiceFaceTex{
+    width:u32,
+    height:u32,
+    img_data:Clamped<Vec<u8>>,
+    face_number:u32,
+    bitmap:Option<ImageBitmap>,
+}
+
+impl DiceFaceTex{
+
+}
+
+pub fn get_dice_data()-> Rc<RefCell<Vec<DiceFaceTex>>>{
+    let canvas = get_canvas();
+    let context = get_drawing_context(&canvas);
+
+    let image = get_element_by_id("dice").dyn_into::<HtmlImageElement>()
+        .map_err(|_| ()).unwrap();
+
+    let _ = context.draw_image_with_html_image_element_and_dw_and_dh(&image, 0f64, 0f64,
+                                                                     image.width() as f64, image.height() as f64);
+    let img_data = context.get_image_data(0f64, 0f64
+                                          , image.width() as f64, image.height() as f64).unwrap().data();
+    draw_board();
+    let mut ret:Vec<DiceFaceTex> = vec![];
+    let texes_along_width = 3u32;
+    let texes_along_height = 2u32;
+    let face_height = image.height() / texes_along_height;
+    let face_width = image.width() / texes_along_width;
+
+    for face_row in 0..texes_along_width {
+        for face_col in 0..texes_along_height {
+            let mut new_face = DiceFaceTex{
+                width: face_width,
+                height: face_height,
+                img_data: Clamped(Vec::new()),
+                face_number: (face_row + face_col * texes_along_width) + 1,
+                bitmap: None,
+            };
+
+            let start_y = face_height * face_col;
+
+            for idx_y in start_y..start_y + face_height{
+                let start_idx = (idx_y * image.width() + face_row * face_width) * 4;
+
+                new_face.img_data.append(&mut img_data[
+                    start_idx as usize..(start_idx + face_width *4) as usize
+                    ].to_vec());
+            }
+            ret.push(new_face);
+        }
+    }
+
+    draw_board();
+
+    let rc2:Rc<RefCell<Vec<DiceFaceTex>>> = Rc::from(RefCell::from(ret));
+    let rc = rc2.clone();
+    spawn_local(async move {
+        for dice in &mut *rc.borrow_mut(){
+            let test = ImageData::new_with_u8_clamped_array(
+                Clamped(dice.img_data.0.as_slice()), dice.width).unwrap();
+            let foo = web_sys::window().unwrap().create_image_bitmap_with_image_data(&test).unwrap();
+            let bar = JsFuture::from(foo);
+            let baz = bar.await.unwrap().dyn_into::<ImageBitmap>().unwrap();
+            dice.bitmap = Some(baz);
+/*            gloo::console::log!(format!("done img for {}", dice.face_number));
+            let _context = get_drawing_context(&get_canvas());
+            if dice.face_number < 4{
+                let _ = _context.draw_image_with_image_bitmap_and_dw_and_dh(dice.bitmap.as_ref().unwrap(),
+                                                                            (100 * (dice.face_number)) as f64,
+                                                                            0f64, 100f64, 100f64);
+            }else {
+                let _ = _context.draw_image_with_image_bitmap_and_dw_and_dh(dice.bitmap.as_ref().unwrap(),
+                                                              (100 * (dice.face_number- 3)) as f64,
+                                                              100f64, 100f64, 100f64);
+            }*/
+        }
+
+
+      //  gloo::console::log!(format!("{}", rc.clone().as_ref()));
+    });
+    /*let baz = executor::block_on(bar).unwrap().dyn_into::<ImageBitmap>().unwrap();
+    gloo::console::log!("drawing");
+    let res = context.draw_image_with_image_bitmap(&baz, 100f64, 100f64);
+    gloo::console::log!("done");
+*/
+    rc2
+}

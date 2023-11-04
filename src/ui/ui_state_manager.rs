@@ -1,6 +1,6 @@
 use std::rc::Rc;
 use std::cell::RefCell;
-use web_sys::{Document, Crypto,Window};
+use web_sys::{Document};
 use crate::element_getters::get_document;
 use crate::game::Game;
 use crate::ui::wrap_elem::{WrapBtn, WrapHtml, WrapLabel};
@@ -19,14 +19,12 @@ const ASCII_LOWER: [char; ALPHABET_LEN] = [
 
 fn get_random_id() -> String {
     let mut rand_arry = [0u8; 10];
-    let window_instance = web_sys::window().unwrap();
-    let crypto = window_instance.crypto().unwrap();
-    crypto.get_random_values_with_u8_array(&mut rand_arry).unwrap();
-    let mut ret = "".to_string();
-    for num in rand_arry{
+    web_sys::window().unwrap().crypto().unwrap()
+        .get_random_values_with_u8_array(&mut rand_arry).unwrap();
+    let ret:String= rand_arry.iter().map(|num|{
         let get_idx = (num / 10) as usize;
-        ret.push(ASCII_LOWER[get_idx])
-    }
+        ASCII_LOWER[get_idx]
+    }).collect();
     ret
 }
 
@@ -36,7 +34,6 @@ pub trait StatefullView<T> {
     fn mount(&mut self);
     fn update(&mut self, state: T);
     fn update_self(&mut self);
-
     fn get(&self) -> T;
 }
 
@@ -55,10 +52,13 @@ pub struct ViewArmyPlacement{
 
 impl StatefullView<StateArmyPlacement> for ViewArmyPlacement{
     fn create(doc: &Document) -> Self {
+        let count_id =get_random_id();
         let mut ret = ViewArmyPlacement{
             state: Default::default(),
-            template: WrapHtml::new(doc, "army_placement".to_string(), HTML_ARMY_PLACEMENT ),
-            count_label: WrapLabel::new(doc, "place_army_count".to_string(), "lkmlk".to_string()),
+            template: WrapHtml::new(doc, "army_placement".to_string(),
+                                    template_army_placement(&count_id).as_str() ),
+            count_label: WrapLabel::new(doc,
+                                        count_id, "lkmlk".to_string()),
             mounted: false,
         };
         ret.update_self();
@@ -115,7 +115,7 @@ impl StatefullView<StateStartArmyPlacement> for ViewStartArmyPlacement {
         ViewStartArmyPlacement {
             state: StateStartArmyPlacement::default(),
             template: WrapHtml::new(&doc, "start_army_placement".to_string(),
-                        template_start_placement(&id_player , &id_count).as_str()),
+                                    template_start_army_placement(&id_player, &id_count).as_str()),
             player_label: WrapLabel::new(&doc,
                                          id_player, "unset".to_string()),
             army_count_label: WrapLabel::new(&doc,
