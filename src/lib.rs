@@ -12,11 +12,8 @@ use std::rc::Rc;
 use wasm_bindgen::prelude::*;
 use crate::canvas::get_map_lookup_data;
 use crate::game::Game;
-//use sycamore;
 use crate::element_getters::{attach_handler_to_btn, get_button_by_id, /*get_element_by_id*/};
-//use crate::ui::main::UiMainProps;
 use gloo::console::log as console_log;
-//use sycamore::prelude::create_signal;
 use crate::ui::ui_state_manager::{Selected, UiStateManager};
 
 #[wasm_bindgen(start)]
