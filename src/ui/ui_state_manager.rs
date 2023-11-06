@@ -3,9 +3,9 @@ use std::cell::RefCell;
 use web_sys::{Document};
 use crate::element_getters::get_document;
 use crate::game::Game;
-use crate::ui::wrap_elem::{WrapBtn, WrapHtml, WrapLabel};
+use crate::ui::wrap_elem::{WrapBtn, WrapHtml, WrapDiv};
 use crate::ui::templates::*;
-use crate::ui::traits::{HTML_Label, HTMLable};
+use crate::ui::traits::{HTML_Div, HTMLable};
 
 const ALPHABET_LEN:usize = 26;
 const ASCII_LOWER: [char; ALPHABET_LEN] = [
@@ -16,17 +16,6 @@ const ASCII_LOWER: [char; ALPHABET_LEN] = [
     'u', 'v', 'w', 'x', 'y',
     'z',
 ];
-
-fn get_random_id() -> String {
-    let mut rand_arry = [0u8; 10];
-    web_sys::window().unwrap().crypto().unwrap()
-        .get_random_values_with_u8_array(&mut rand_arry).unwrap();
-    let ret:String= rand_arry.iter().map(|num|{
-        let get_idx = (num / 10) as usize;
-        ASCII_LOWER[get_idx]
-    }).collect();
-    ret
-}
 
 
 pub trait StatefullView<T> {
@@ -46,7 +35,7 @@ pub struct StateArmyPlacement {
 pub struct ViewArmyPlacement{
     pub state:StateArmyPlacement,
     template:WrapHtml,
-    count_label:WrapLabel,
+    count_label: WrapDiv,
     mounted:bool,
 }
 
@@ -57,8 +46,8 @@ impl StatefullView<StateArmyPlacement> for ViewArmyPlacement{
             state: Default::default(),
             template: WrapHtml::new(doc, "army_placement".to_string(),
                                     template_army_placement(&count_id).as_str() ),
-            count_label: WrapLabel::new(doc,
-                                        count_id, "lkmlk".to_string()),
+            count_label: WrapDiv::new(doc,
+                                      count_id, "lkmlk".to_string()),
             mounted: false,
         };
         ret.update_self();
@@ -102,8 +91,8 @@ pub struct StateStartArmyPlacement {
 pub struct ViewStartArmyPlacement {
     pub state: StateStartArmyPlacement,
     template: WrapHtml,
-    player_label: WrapLabel,
-    army_count_label: WrapLabel,
+    player_label: WrapDiv,
+    army_count_label: WrapDiv,
     mounted:bool,
 }
 
@@ -116,10 +105,10 @@ impl StatefullView<StateStartArmyPlacement> for ViewStartArmyPlacement {
             state: StateStartArmyPlacement::default(),
             template: WrapHtml::new(&doc, "start_army_placement".to_string(),
                                     template_start_army_placement(&id_player, &id_count).as_str()),
-            player_label: WrapLabel::new(&doc,
-                                         id_player, "unset".to_string()),
-            army_count_label: WrapLabel::new(&doc,
-                                             id_count, "unset".to_string()),
+            player_label: WrapDiv::new(&doc,
+                                       id_player, "unset".to_string()),
+            army_count_label: WrapDiv::new(&doc,
+                                           id_count, "unset".to_string()),
             mounted: false,
         }
     }
@@ -162,7 +151,7 @@ pub struct StateHeader {
 pub struct ViewHeader{
 //    template:WrapHtml,
     pub state:StateHeader,
-    text_label:WrapLabel,
+    text_label: WrapDiv,
     mounted:bool
 }
 
@@ -173,7 +162,7 @@ impl StatefullView<StateHeader> for ViewHeader{
                 active: true,
                 text: "Player 1".to_string(),
             },
-            text_label: WrapLabel::new(doc,"header".to_string(),"".to_string()),
+            text_label: WrapDiv::new(doc, "header".to_string(), "".to_string()),
             mounted: false,
         };
 
@@ -214,7 +203,7 @@ pub struct StateTurnStart {
 pub struct ViewTurnStart{
     template:WrapHtml,
     state:StateTurnStart,
-    text_label:WrapLabel,
+    text_label: WrapDiv,
     reinforce_btn:WrapBtn,
 }
 
@@ -227,7 +216,29 @@ pub struct StateCombat {
 pub struct ViewCombat{
     state:StateArmyPlacement,
     template:WrapHtml,
-    count_label:WrapLabel,
+    count_label: WrapDiv,
+}
+
+impl StatefullView<StateCombat> for ViewCombat{
+    fn create(doc: &Document) -> Self {
+        todo!()
+    }
+
+    fn mount(&mut self) {
+        todo!()
+    }
+
+    fn update(&mut self, state: StateCombat) {
+        todo!()
+    }
+
+    fn update_self(&mut self) {
+        todo!()
+    }
+
+    fn get(&self) -> StateCombat {
+        todo!()
+    }
 }
 
 #[derive(Clone, Default)]
@@ -239,7 +250,7 @@ pub struct StateCombatEnd {
 pub struct ViewCombatEnd{
     state:StateArmyPlacement,
     template:WrapHtml,
-    count_label:WrapLabel,
+    count_label: WrapDiv,
 }
 
 #[derive(Clone, Default)]
@@ -251,7 +262,7 @@ pub struct StateGameEnd {
 pub struct ViewGameEnd{
     state:StateArmyPlacement,
     template:WrapHtml,
-    count_label:WrapLabel,
+    count_label: WrapDiv,
 }
 
 #[derive(Clone )]
@@ -293,4 +304,16 @@ impl UiStateManager {
         self.army_placement.update_self();
     }
 
+}
+
+
+fn get_random_id() -> String {
+    let mut rand_arry = [0u8; 10];
+    web_sys::window().unwrap().crypto().unwrap()
+        .get_random_values_with_u8_array(&mut rand_arry).unwrap();
+    let ret:String= rand_arry.iter().map(|num|{
+        let get_idx = (num / 10) as usize;
+        ASCII_LOWER[get_idx]
+    }).collect();
+    ret
 }

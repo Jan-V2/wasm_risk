@@ -39,8 +39,9 @@ pub fn set_info_field(string:String){
 }
 
 
-pub fn get_canvas() -> HtmlCanvasElement{
-    let canvas = get_element_by_id("canvas");
+
+pub fn get_canvas(id:&str) -> HtmlCanvasElement{
+    let canvas = get_element_by_id(id);
     return canvas
         .dyn_into::<HtmlCanvasElement>()
         .map_err(|_| ())

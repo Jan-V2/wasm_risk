@@ -1,19 +1,19 @@
 
-use wasm_bindgen::{Clamped, JsValue};
-use web_sys::{CssStyleDeclaration, Document, HtmlButtonElement, HtmlElement, HtmlImageElement, HtmlLabelElement, MouseEvent, Node};
+use wasm_bindgen::{Clamped, JsCast, JsValue};
+use web_sys::{CssStyleDeclaration, Document, HtmlButtonElement, HtmlCanvasElement, HtmlDivElement, HtmlElement, HtmlImageElement, HtmlLabelElement, HtmlOptionElement, HtmlSelectElement, MouseEvent, Node};
 use crate::element_getters::{create_new_elem, get_element_by_id, attach_handler_to_btn};
 use crate::ui::traits::*;
 
-pub struct WrapLabel {
-    elem:HtmlLabelElement,
+pub struct WrapDiv {
+    elem:HtmlDivElement,
     id:String,
     text:String,
 }
 
-impl HTML_Label for WrapLabel {
+impl HTML_Div for WrapDiv {
     fn new(document:&Document, id:String, text: String) -> Self {
-        let ret = WrapLabel {
-            elem: create_new_elem(document, "label"),
+        let ret = WrapDiv {
+            elem: create_new_elem(document, "div"),
             id,
             text,
         };
@@ -30,6 +30,41 @@ impl HTML_Label for WrapLabel {
         self.text.clone()
     }
 }
+
+pub struct WrapSelect{
+    elem:HtmlSelectElement,
+    id:String,
+}
+
+impl WrapSelect {
+    pub fn new_from_id(id:String)->WrapSelect{
+        let ret = WrapSelect{
+            elem: get_element_by_id(id.as_str()).dyn_into::<HtmlSelectElement>().unwrap(),
+            id,
+        };
+        ret
+    }
+    
+    
+    pub fn new(document:&Document, id:String, options:&Vec<(String, String)>) -> WrapSelect{
+        let ret = WrapSelect{
+            elem: create_new_elem(document, "select"),
+            id,
+        };
+        for option_vals in options{
+            let option:HtmlOptionElement = create_new_elem(document, "option");
+            option.set_text(option_vals.0.as_str());
+            option.set_value(option_vals.1.as_str());
+            let _ = ret.elem.append_child(&option);
+        }
+        ret
+    }
+
+    pub fn get_value(&self)->String{
+        self.elem.value()
+    }
+}
+
 
 pub struct WrapBtn{
     elem:HtmlButtonElement,
@@ -49,15 +84,9 @@ impl WrapBtn {
     }
 }
 
-pub struct WrapImage{
-    elem:HtmlImageElement,
-    id:String,
-}
-
-impl WrapImage{
-    pub fn set(&mut self, img_data:Clamped<Vec<u8>>, width:u32){
-        //self.elem.putI
-    }
+pub struct WrapDiceCanvas{
+    elem:HtmlCanvasElement,
+    id:String
 }
 
 
@@ -86,17 +115,20 @@ fn chk_append_child(id:&str, node:&Node){
         panic!("could not mount to id {}", id)
     }
 }
+fn chk_set_css_property(css:&CssStyleDeclaration, property:&str, value:&str ){
+    let res = css.set_property(property, value);
+    if res.is_err(){
+        panic!("unable to set css property {} to {}", property, value)
+    }
+}
 
 fn chk_set_visbility(css:&CssStyleDeclaration, is_visible:bool){
-    let res:Result<(), JsValue>;
     if is_visible{
-        res =css.set_property("display", "block");
+        chk_set_css_property(css, "display", "block");
     }else {
-        res =css.set_property("display", "none");
+        chk_set_css_property(css, "display", "none");
     }
-    if res.is_err(){
-        panic!("unable to set template visibility to {}", is_visible)
-    }
+
 }
 
 impl HTMLable for WrapHtml {
@@ -111,7 +143,7 @@ impl HTMLable for WrapHtml {
 
 }
 
-impl HTMLable for WrapLabel {
+impl HTMLable for WrapDiv {
     fn mount(&self) {
         chk_append_child(self.id.as_str(), &self.elem);
     }
@@ -131,8 +163,7 @@ impl HTMLable for WrapBtn{
     }
 }
 
-
-impl HTMLable for WrapImage{
+impl HTMLable for WrapSelect{
     fn mount(&self) {
         chk_append_child(self.id.as_str(), &self.elem);
     }
@@ -140,4 +171,5 @@ impl HTMLable for WrapImage{
     fn set_visibilty(&mut self, is_visible: bool) {
         chk_set_visbility(&self.elem.style(), is_visible)
     }
+
 }

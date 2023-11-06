@@ -72,9 +72,9 @@ impl Game {
 
     pub fn draw_board(&self) {
         if self.model.players.len() > 0 {
-            //crate::canvas::redraw_board_state(&self.model, self.flag_scale, true);
+            crate::canvas::redraw_board_state(&self.model, self.flag_scale, true);
         } else {
-            //crate::canvas::redraw_board_state(&self.model, self.flag_scale, false);
+            crate::canvas::redraw_board_state(&self.model, self.flag_scale, false);
         }
     }
 
@@ -97,7 +97,7 @@ impl Game {
             self.model.players.push(Player {
                 id: i as u32,
                 cards: vec![],
-                color: config.player_colors.get_clone()[i as usize].as_str().clone().to_string(),
+                color: config.player_colors.get_clone()[i as usize].as_str().to_string(),
                 is_computer: config.player_is_ai[i as usize],
             })
         }

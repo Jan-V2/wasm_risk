@@ -12,7 +12,7 @@ extern crate queues;
 
 
 pub fn get_map_lookup_data(max_div: u32) -> ProvLookupTable {
-    let canvas = get_canvas();
+    let canvas = get_canvas("canvas");
     let context = get_drawing_context(&canvas);
     draw_board_raw(&canvas, &context);
 
@@ -31,7 +31,7 @@ pub fn get_map_lookup_data(max_div: u32) -> ProvLookupTable {
 
 pub fn ui_init_canvas(game_model: Rc<RefCell<Game>>) {
     // inits canvas click handeler
-    let canvas = get_canvas();
+    let canvas = get_canvas("canvas");
     let game_model_clone = game_model.clone();
 
     let canvas_xy_mouseover_handeler = Closure::<dyn FnMut(_)>::new(move |event: MouseEvent| {
@@ -52,7 +52,7 @@ pub fn ui_init_canvas(game_model: Rc<RefCell<Game>>) {
 
 
         if text.is_some(){
-            let canvas = get_canvas();
+            let canvas = get_canvas("canvas");
             let ct = get_drawing_context(&canvas);
 
             let point_size = 13f64;
@@ -70,7 +70,7 @@ pub fn ui_init_canvas(game_model: Rc<RefCell<Game>>) {
     canvas_xy_mouseover_handeler.forget();
 
     let canvas_click_handler = Closure::<dyn FnMut(_)>::new(move |_event: MouseEvent| {
-        let _canvas = get_canvas();
+        let _canvas = get_canvas("canvas");
         let clicked_coord = [_event.x() - _canvas.offset_left(), _event.y() - _canvas.offset_top()];
 
         let ret_coord = Coord {
@@ -95,7 +95,7 @@ pub fn redraw_board_state(model: &Model, scale: f64, draw_flags:bool){
 
 
 fn draw_all_flags(model: &Model, scale: f64) {
-    let canvas = get_canvas();
+    let canvas = get_canvas("canvas");
     let ct = get_drawing_context(&canvas);
 
     for prov in &model.provinces {
@@ -135,7 +135,7 @@ fn draw_all_army_count(provs: &Vec<Province>, scale: f64) {
     // this is the only method, because redrawing the army count requires screen clear.
     // text js fiddle https://jsfiddle.net/xcp370k1/
 
-    let canvas = get_canvas();
+    let canvas = get_canvas("canvas");
     let ct = get_drawing_context(&canvas);
 
     let padding = 3f64;
@@ -157,7 +157,7 @@ fn draw_all_army_count(provs: &Vec<Province>, scale: f64) {
 
 
 pub fn draw_board() {
-    let canvas = get_canvas();
+    let canvas = get_canvas("canvas");
     draw_board_raw(&canvas, &get_drawing_context(&canvas));
 }
 
@@ -180,12 +180,15 @@ pub struct DiceFaceTex{
     bitmap:Option<ImageBitmap>,
 }
 
-impl DiceFaceTex{
-
+pub fn draw_dice(dice:&DiceFaceTex, location:Coord, size:u32, context:CanvasRenderingContext2d, ){
+    let _ = context.draw_image_with_image_bitmap_and_dw_and_dh(dice.bitmap.as_ref().unwrap(),
+                                                                location.x as f64, location.y as f64,
+                                                               size as f64, size as f64);
 }
 
+
 pub fn get_dice_data()-> Rc<RefCell<Vec<DiceFaceTex>>>{
-    let canvas = get_canvas();
+    let canvas = get_canvas("canvas");
     let context = get_drawing_context(&canvas);
 
     let image = get_element_by_id("dice").dyn_into::<HtmlImageElement>()
@@ -237,26 +240,8 @@ pub fn get_dice_data()-> Rc<RefCell<Vec<DiceFaceTex>>>{
             let bar = JsFuture::from(foo);
             let baz = bar.await.unwrap().dyn_into::<ImageBitmap>().unwrap();
             dice.bitmap = Some(baz);
-/*            gloo::console::log!(format!("done img for {}", dice.face_number));
-            let _context = get_drawing_context(&get_canvas());
-            if dice.face_number < 4{
-                let _ = _context.draw_image_with_image_bitmap_and_dw_and_dh(dice.bitmap.as_ref().unwrap(),
-                                                                            (100 * (dice.face_number)) as f64,
-                                                                            0f64, 100f64, 100f64);
-            }else {
-                let _ = _context.draw_image_with_image_bitmap_and_dw_and_dh(dice.bitmap.as_ref().unwrap(),
-                                                              (100 * (dice.face_number- 3)) as f64,
-                                                              100f64, 100f64, 100f64);
-            }*/
         }
-
-
-      //  gloo::console::log!(format!("{}", rc.clone().as_ref()));
     });
-    /*let baz = executor::block_on(bar).unwrap().dyn_into::<ImageBitmap>().unwrap();
-    gloo::console::log!("drawing");
-    let res = context.draw_image_with_image_bitmap(&baz, 100f64, 100f64);
-    gloo::console::log!("done");
-*/
+
     rc2
 }
