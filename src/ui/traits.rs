@@ -2,10 +2,11 @@
 
 use web_sys::Document;
 
+
 pub trait HTMLable{
     fn mount(&self);// -> result?
     fn set_visibilty(&mut self, is_visible:bool);
-
+    fn new_from_id(id:&String)-> Self;
 }
 
 pub trait HTML_Div where Self:HTMLable {

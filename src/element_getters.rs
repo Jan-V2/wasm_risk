@@ -32,6 +32,15 @@ pub fn get_element_by_id(id :&str) -> Element{
     res.unwrap()
 }
 
+#[allow(non_snake_case)]
+pub fn get_T_from_id<T>(id:&str) ->T   where T:JsCast{
+    let res = get_element_by_id(id).dyn_into::<T>();
+    if res.is_err(){
+        panic!("failed to cast element with id {}", id)
+    }
+    res.unwrap()
+}
+
 pub fn set_info_field(string:String){
     let elem = get_element_by_id("text_out").dyn_into::<HtmlLabelElement>()
         .map_err(|_| ()).unwrap();

@@ -3,7 +3,7 @@ use std::cell::RefCell;
 use web_sys::{Document};
 use crate::element_getters::get_document;
 use crate::game::Game;
-use crate::ui::wrap_elem::{WrapBtn, WrapHtml, WrapDiv};
+use crate::ui::wrap_elem::{WrapBtn, WrapHtml, WrapDiv, WrapSelect, WrapHeading};
 use crate::ui::templates::*;
 use crate::ui::traits::{HTML_Div, HTMLable};
 
@@ -210,34 +210,94 @@ pub struct ViewTurnStart{
 #[derive(Clone, Default)]
 pub struct StateCombat {
     pub active: bool,
-    pub armies: u32,
+    pub attack_location:String,
+    pub armies_attacking: u32,
+    pub armies_defending:u32,
+    pub id_attacker:Option<u32>,
+    pub id_defender:Option<u32>,
+}
+
+pub struct CombatArmySelect{
+    main:WrapDiv,
+    select:WrapSelect,
+    player_text:WrapDiv,
+    btn_next:WrapBtn,
 }
 
 pub struct ViewCombat{
-    state:StateArmyPlacement,
+    state:StateCombat,
     template:WrapHtml,
-    count_label: WrapDiv,
+    title: WrapDiv,
+    location_text: WrapHeading,
+    balance_text: WrapDiv,
+    menu_defend:CombatArmySelect,
+    menu_attack:CombatArmySelect,
 }
 
 impl StatefullView<StateCombat> for ViewCombat{
     fn create(doc: &Document) -> Self {
-        todo!()
+        let id_title = get_random_id();
+        let id_location = get_random_id();
+        let id_balance = get_random_id();
+        let id_main = (get_random_id(), get_random_id());
+        let id_select = (get_random_id(), get_random_id());
+        let id_player_text = (get_random_id(), get_random_id());
+        let id_btn = (get_random_id(), get_random_id());
+
+        let template = WrapHtml::new(doc, "combat".to_string(), template_combat_menu(
+            &id_title, &id_location, &id_balance, &id_select, &id_player_text,
+            &id_btn, &id_main
+        ).as_str());
+        template.mount();
+        ViewCombat{
+            state: Default::default(),
+            title: WrapDiv::new_from_id(&id_title),
+            location_text: WrapHeading::new_from_id(&id_location),
+            balance_text: WrapDiv::new_from_id(&id_balance),
+            menu_defend: CombatArmySelect {
+                main: WrapDiv::new_from_id(&id_main.0),
+                select: WrapSelect::new_from_id(&id_select.0),
+                player_text: WrapDiv::new_from_id(&id_player_text.0),
+                btn_next: WrapBtn::new_from_id(&id_btn.0),
+            },
+            menu_attack: CombatArmySelect {
+                main: WrapDiv::new_from_id(&id_main.1),
+                select: WrapSelect::new_from_id(&id_select.1),
+                player_text: WrapDiv::new_from_id(&id_player_text.1),
+                btn_next: WrapBtn::new_from_id(&id_btn.1),
+            },
+            template,
+        }
     }
 
     fn mount(&mut self) {
-        todo!()
+        self.template.set_visibilty(false);
+        //todo set btn next
     }
 
     fn update(&mut self, state: StateCombat) {
-        todo!()
+        self.state = state;
+        self.update_self();
     }
 
     fn update_self(&mut self) {
-        todo!()
+        self.location_text.set_text(format!("Attack in {}", self.state.attack_location));
+        self.balance_text.set_text(format!("Defenders {}:{} Attackers",
+                                           self.state.armies_defending, self.state.armies_attacking));
+        let handle_combat_view = |view:&mut CombatArmySelect, player:&Option<u32>|{
+            if player.is_some(){
+                view.player_text.set_text(format!("Player {}", player.as_ref().unwrap()))
+                //todo limit options in select
+            }else {
+                view.main.set_visibilty(false)
+            }
+        };
+        handle_combat_view(&mut self.menu_attack, &self.state.id_attacker);
+        handle_combat_view(&mut self.menu_defend, &self.state.id_defender);
     }
 
     fn get(&self) -> StateCombat {
-        todo!()
+        self.state.clone()
     }
 }
 
@@ -253,7 +313,7 @@ pub struct ViewCombatEnd{
     count_label: WrapDiv,
 }
 
-#[derive(Clone, Default)]
+#[derive(Clone, Default )]
 pub struct StateGameEnd {
     pub active: bool,
     pub armies: u32,
@@ -269,7 +329,9 @@ pub struct ViewGameEnd{
 pub enum Selected{
     Header,
     StartPlace,
-    Place
+    Place,
+    Combat,
+    Combat_end,
 }
 
 pub struct UiStateManager {
@@ -278,6 +340,7 @@ pub struct UiStateManager {
     pub start_army_placement: ViewStartArmyPlacement,
     pub army_placement:ViewArmyPlacement,
     pub selected:Selected,
+    pub combat:ViewCombat
 }
 
 impl UiStateManager {
@@ -289,6 +352,7 @@ impl UiStateManager {
             start_army_placement: ViewStartArmyPlacement::create(&doc),
             army_placement: ViewArmyPlacement::create(&doc),
             selected: Selected::Header,
+            combat: ViewCombat::create(&doc),
         }
     }
 
@@ -296,6 +360,7 @@ impl UiStateManager {
         self.header.mount();
         self.start_army_placement.mount();
         self.army_placement.mount();
+       // self.combat.mount();
     }
 
     pub fn update_all(&mut self){

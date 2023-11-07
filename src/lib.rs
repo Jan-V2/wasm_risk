@@ -14,7 +14,7 @@ use crate::canvas::get_map_lookup_data;
 use crate::game::Game;
 use crate::element_getters::{attach_handler_to_btn, get_button_by_id, /*get_element_by_id*/};
 use gloo::console::log as console_log;
-use crate::ui::ui_state_manager::{Selected, UiStateManager};
+use crate::ui::ui_state_manager::{Selected, StateCombat, StatefullView, UiStateManager};
 
 #[wasm_bindgen(start)]
 fn setup() {
@@ -33,22 +33,17 @@ fn setup() {
 
     let mut ui_state = UiStateManager::build(refc_game.clone());
     ui_state.mount();
-
-    let handler = Box::from(move|_|{/*
-        let mut state = ui_state.start_army_placement.get();
-        if state.active{
-            if state.armies[state.current_player as usize] > 0 {
-                state.armies[state.current_player as usize] -= 1;
-                if state.armies[state.current_player as usize] == 0
-                    && state.current_player + 1 < state.armies.len() as u32 {
-                    state.current_player += 1;
-                }
-            }
-        }else{
-            state.active = true;
-        }
-        ui_state.start_army_placement.update(state);*/
-        let selected = ui_state.selected.clone();
+    ui_state.combat.update(StateCombat{
+        active: true,
+        attack_location:"West Europe".to_string(),
+        armies_attacking:5,
+        armies_defending:10,
+        id_attacker: Some(1),
+        id_defender:Some(3),
+    });
+/*
+    let handler = Box::from(move|_|{
+       let selected = ui_state.selected.clone();
 
         match selected{
             Selected::Header => {
@@ -77,6 +72,14 @@ fn setup() {
 
         ui_state.update_all();
     });
+*/
+
+
+    let handler = Box::from(move|_|{
+        let selected = ui_state.selected.clone();
+        ui_state.update_all();
+    });
+
     let btn = get_button_by_id("tester");
     attach_handler_to_btn(&btn, "click", handler);
 

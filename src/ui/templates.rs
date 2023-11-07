@@ -1,4 +1,4 @@
-use html_builder::*;                          // Contents added to buf by each statement
+use html_builder::*;
 use std::fmt::Write;
 
 pub fn template_start_army_placement(id_player:&String, id_count:&String) ->String{
@@ -41,44 +41,48 @@ pub fn template_game_end()->String{
 }
 
 pub fn template_dice_roll(id_canvases:(&String, &String), next_btn:&String)->String{
-    const canvas_width: u32 = 300;
-    const canvas_height: u32 = 100;
+    const CANVAS_WIDTH: u32 = 300;
+    const CANVAS_HEIGHT: u32 = 100;
     let mut buf = Buffer::new();
     let mut main = buf.div();
     let mut attack = main.div().attr(fmt_style("margin-bottom: 15px;").as_str());
     writeln!(attack.h4(), "Attacker rolled" ).unwrap();
-    let _ = attack.canvas().attr(format!("width='{canvas_width}'").as_str())
-        .attr(format!("height='{canvas_height}'").as_str())
+    let _ = attack.canvas().attr(format!("width='{CANVAS_WIDTH}'").as_str())
+        .attr(format!("height='{CANVAS_HEIGHT}'").as_str())
         .attr(fmt_id(id_canvases.0).as_str());
     let mut defend = main.div().attr(fmt_style("margin-bottom: 15px;").as_str());
     writeln!(defend.h4(), "Defender rolled" ).unwrap();
-    let _ = defend.canvas().attr(format!("width='{canvas_width}'").as_str())
-        .attr(format!("height='{canvas_height}'").as_str())
+    let _ = defend.canvas().attr(format!("width='{CANVAS_WIDTH}'").as_str())
+        .attr(format!("height='{CANVAS_HEIGHT}'").as_str())
         .attr(fmt_id(id_canvases.1).as_str());
     writeln!(buf.button().attr(fmt_id(next_btn).as_str()), "Next").unwrap();
 
     buf.finish()
 }
 
-c
-pub fn template_combat_menu(main_id:&String, attack_label:&String, balance_label:&String,
-                            select:(&String, &String), player_label:(&String, &String),
-                            button_action:(&String, &String))->String{
-    let mut buf = Buffer::new();
-    let mut main = buf.div().attr(fmt_id(main_id).as_str());
 
-    writeln!(main.h3().attr(fmt_id(attack_label).as_str()), "Attack in example").unwrap();
-    writeln!(main.div().attr(fmt_id(balance_label).as_str()).attr(
+
+pub fn template_combat_menu(title:&String, location_text:&String, balance_text:&String,
+                            select:&(String, String), player_text:&(String, String),
+                            button_action:&(String, String), id_main:&(String, String)) ->String{
+    let mut buf = Buffer::new();
+    let mut main = buf.div().attr(fmt_id(title).as_str());
+
+    writeln!(main.h3().attr(fmt_id(location_text).as_str()), "Attack in example").unwrap();
+    writeln!(main.div().attr(fmt_id(balance_text).as_str()).attr(
         fmt_style("margin-bottom: 15px;").as_str()
     ), "balance example").unwrap();
-    army_selector(&mut main, true,select.0, player_label.0, button_action.0);
-    army_selector(&mut main, false, select.1, player_label.1, button_action.1);
+    army_selector(&mut main, true, &id_main.0,
+                  &select.0, &player_text.0, &button_action.0);
+    army_selector(&mut main, false, &id_main.1,
+                  &select.1, &player_text.1, &button_action.1);
     buf.finish()
 }
 
-pub fn army_selector(node:&mut Node, is_attack:bool, id_select:&String, id_player_label:&String,
+pub fn army_selector(node:&mut Node, is_attack:bool, id_main:&String, id_select:&String, id_player_label:&String,
                     id_button:&String){
-    let mut main = node.div().attr(fmt_style("margin-bottom: 30px;").as_str());
+    let mut main = node.div().attr(fmt_style("margin-bottom: 30px;").as_str())
+        .attr(fmt_id(id_main).as_str());
     writeln!(main.div().attr(fmt_id(&id_player_label).as_str())
                  .attr(fmt_style("margin-bottom: 10px").as_str()),
              "player example"
