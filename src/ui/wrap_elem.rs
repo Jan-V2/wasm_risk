@@ -64,7 +64,7 @@ impl HTML_Div for WrapDiv {
 }
 
 pub struct WrapSelect{
-    elem:HtmlSelectElement,
+    pub elem:HtmlSelectElement,
     id:String,
 }
 
@@ -168,7 +168,7 @@ fn chk_set_css_property(css:&CssStyleDeclaration, property:&str, value:&str ){
     }
 }
 
-fn chk_set_visbility(css:&CssStyleDeclaration, is_visible:bool){
+pub fn chk_set_visbility(css:&CssStyleDeclaration, is_visible:bool){
     if is_visible{
         chk_set_css_property(css, "display", "block");
     }else {

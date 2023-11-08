@@ -1,11 +1,13 @@
 use std::rc::Rc;
 use std::cell::RefCell;
-use web_sys::{Document};
+use gloo::console::log;
+use wasm_bindgen::JsCast;
+use web_sys::{Document, HtmlOptionElement};
 use crate::canvas::{DiceFaceTex, get_dice_tex};
 use crate::element_getters::get_document;
 use crate::game::Game;
 use crate::model::CombatResult;
-use crate::ui::wrap_elem::{WrapBtn, WrapHtml, WrapDiv, WrapSelect, WrapHeading, WrapDiceCanvas};
+use crate::ui::wrap_elem::{WrapBtn, WrapHtml, WrapDiv, WrapSelect, WrapHeading, WrapDiceCanvas, chk_set_visbility};
 use crate::ui::templates::*;
 use crate::ui::traits::{HTML_Div, HTMLable};
 
@@ -257,16 +259,16 @@ impl StatefullView<StateCombat> for ViewCombat{
             location_text: WrapHeading::new_from_id(&id_location),
             balance_text: WrapDiv::new_from_id(&id_balance),
             menu_defend: CombatArmySelect {
-                main: WrapDiv::new_from_id(&id_main.0),
-                select: WrapSelect::new_from_id(&id_select.0),
-                player_text: WrapDiv::new_from_id(&id_player_text.0),
-                btn_next: WrapBtn::new_from_id(&id_btn.0),
-            },
-            menu_attack: CombatArmySelect {
                 main: WrapDiv::new_from_id(&id_main.1),
                 select: WrapSelect::new_from_id(&id_select.1),
                 player_text: WrapDiv::new_from_id(&id_player_text.1),
                 btn_next: WrapBtn::new_from_id(&id_btn.1),
+            },
+            menu_attack: CombatArmySelect {
+                main: WrapDiv::new_from_id(&id_main.0),
+                select: WrapSelect::new_from_id(&id_select.0),
+                player_text: WrapDiv::new_from_id(&id_player_text.0),
+                btn_next: WrapBtn::new_from_id(&id_btn.0),
             },
             template,
         }
@@ -286,16 +288,40 @@ impl StatefullView<StateCombat> for ViewCombat{
         self.location_text.set_text(format!("Attack in {}", self.state.attack_location));
         self.balance_text.set_text(format!("Defenders {}:{} Attackers",
                                            self.state.armies_defending, self.state.armies_attacking));
-        let handle_combat_view = |view:&mut CombatArmySelect, player:&Option<u32>|{
+
+        let set_visibilty_child = |elem :&WrapSelect, idx:u32, visible:bool|{
+            let child = elem.elem.children()
+                .get_with_index(idx).unwrap().dyn_into::<HtmlOptionElement>().unwrap();
+            chk_set_visbility(&child.style(), visible);
+        };
+
+        let handle_combat_view = |view:&mut CombatArmySelect, player:&Option<u32>, armies:u32,
+                                  is_attacker:bool|{
             if player.is_some(){
-                view.player_text.set_text(format!("Player {}", player.as_ref().unwrap()))
-                //todo limit options in select
+                view.player_text.set_text(format!("Player {}", player.as_ref().unwrap()));
+                if armies > 2 && is_attacker{
+                    log!(format!("attacker and > 2 is attack {} armies {}",is_attacker, armies));
+                    set_visibilty_child(&view.select, 1, true );
+                    set_visibilty_child(&view.select, 2, true );
+                    return;
+                }else if  armies > 1 {
+                    log!(format!("armies > 1 is attack {} armies {}",is_attacker, armies));
+                    set_visibilty_child(&view.select, 1, true );
+                    set_visibilty_child(&view.select, 2, false );
+                } else {
+                    log!(format!("1 army is attack {} armies {}",is_attacker, armies));
+                    set_visibilty_child(&view.select, 1, false );
+                    set_visibilty_child(&view.select, 2, false);
+                }
+
             }else {
                 view.main.set_visibilty(false)
             }
         };
-        handle_combat_view(&mut self.menu_attack, &self.state.id_attacker);
-        handle_combat_view(&mut self.menu_defend, &self.state.id_defender);
+        handle_combat_view(&mut self.menu_attack, &self.state.id_attacker,
+                           self.state.armies_attacking, true);
+        handle_combat_view(&mut self.menu_defend, &self.state.id_defender,
+                           self.state.armies_defending, false);
     }
 
     fn get(&self) -> StateCombat {
@@ -408,7 +434,8 @@ impl UiStateManager {
         self.header.mount();
         self.start_army_placement.mount();
         self.army_placement.mount();
-        self.combat.mount();
+        //self.combat.mount();
+        self.dice_rolls.mount();
     }
 
     pub fn update_all(&mut self){

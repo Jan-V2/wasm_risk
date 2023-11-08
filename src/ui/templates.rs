@@ -107,9 +107,8 @@ pub fn army_selector(node:&mut Node, is_attack:bool, id_main:&String, id_select:
 
     add_option(&mut select, "1");
     add_option(&mut select, "2");
-    if is_attack{
-        add_option(&mut select, "3");
-    }
+    add_option(&mut select, "3");
+    
     writeln!(body.div().attr(fmt_style("white-space: break-spaces;").as_str()), "armies").unwrap();
     let mut footer = main.div();
     let _ = footer.div().attr(fmt_style("height: 5px;").as_str());

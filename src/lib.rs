@@ -36,14 +36,14 @@ fn setup() {
     ui_state.mount();
 
 
-/*    ui_state.combat.update(StateCombat{
+    ui_state.combat.update(StateCombat{
         active: false,
         attack_location:"West Europe".to_string(),
-        armies_attacking:5,
-        armies_defending:10,
+        armies_attacking:2,
+        armies_defending:1,
         id_attacker: Some(1),
         id_defender:Some(3),
-    });*/
+    });
 /*
     let handler = Box::from(move|_|{
        let selected = ui_state.selected.clone();
