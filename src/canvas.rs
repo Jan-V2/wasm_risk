@@ -180,14 +180,14 @@ pub struct DiceFaceTex{
     bitmap:Option<ImageBitmap>,
 }
 
-pub fn draw_dice(dice:&DiceFaceTex, location:Coord, size:u32, context:CanvasRenderingContext2d, ){
+pub fn draw_dice( context:CanvasRenderingContext2d, dice:&DiceFaceTex, location:Coord, size:u32 ){
     let _ = context.draw_image_with_image_bitmap_and_dw_and_dh(dice.bitmap.as_ref().unwrap(),
                                                                 location.x as f64, location.y as f64,
                                                                size as f64, size as f64);
 }
 
 
-pub fn get_dice_data()-> Rc<RefCell<Vec<DiceFaceTex>>>{
+pub fn get_dice_tex() -> Rc<RefCell<Vec<DiceFaceTex>>>{
     let canvas = get_canvas("canvas");
     let context = get_drawing_context(&canvas);
 
@@ -236,10 +236,10 @@ pub fn get_dice_data()-> Rc<RefCell<Vec<DiceFaceTex>>>{
         for dice in &mut *rc.borrow_mut(){
             let test = ImageData::new_with_u8_clamped_array(
                 Clamped(dice.img_data.0.as_slice()), dice.width).unwrap();
-            let foo = web_sys::window().unwrap().create_image_bitmap_with_image_data(&test).unwrap();
-            let bar = JsFuture::from(foo);
-            let baz = bar.await.unwrap().dyn_into::<ImageBitmap>().unwrap();
-            dice.bitmap = Some(baz);
+            let tex_future = JsFuture::from(
+                web_sys::window().unwrap().create_image_bitmap_with_image_data(&test).unwrap());
+            let tex = tex_future.await.unwrap().dyn_into::<ImageBitmap>().unwrap();
+            dice.bitmap = Some(tex);
         }
     });
 

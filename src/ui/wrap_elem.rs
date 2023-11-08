@@ -1,7 +1,10 @@
-
+use std::cell::RefCell;
+use std::rc::Rc;
 use wasm_bindgen::{JsCast};
 use web_sys::{CssStyleDeclaration, Document, HtmlButtonElement, HtmlCanvasElement, HtmlDivElement, HtmlElement, HtmlHeadingElement, HtmlOptionElement, HtmlSelectElement, MouseEvent, Node};
-use crate::element_getters::{create_new_elem, get_element_by_id, attach_handler_to_btn, get_T_from_id};
+use crate::canvas::{DiceFaceTex, draw_dice};
+use crate::element_getters::{create_new_elem, get_element_by_id, attach_handler_to_btn, get_T_from_id, get_drawing_context};
+use crate::model::Coord;
 use crate::ui::traits::*;
 
 pub struct WrapHeading{
@@ -107,6 +110,29 @@ impl WrapBtn {
 pub struct WrapDiceCanvas{
     elem:HtmlCanvasElement,
     id:String
+}
+
+impl WrapDiceCanvas {
+    pub fn new(document:&Document, id:String, template:&str, )-> WrapDiceCanvas {
+        let elem:HtmlCanvasElement = create_new_elem(document, "canvas");
+        elem.set_inner_html(template);
+        WrapDiceCanvas {
+            elem,
+            id,
+        }
+    }
+
+    pub fn draw_dice_rolls(&self, dice_rolls:&Vec<u32>, dice_tex:Rc<RefCell<Vec<DiceFaceTex>>>){
+        for i in 0..dice_rolls.len(){
+            let roll = dice_rolls[i];
+            if roll > 6{
+                panic!("invalid dice roll. number {}", roll)
+            }
+            let size = self.elem.height();
+            draw_dice(get_drawing_context(&self.elem), &dice_tex.as_ref().borrow()[(roll-1) as usize],
+            Coord{ y: 0, x: i as i32 * size as i32 }, size )
+        }
+    }
 }
 
 
@@ -245,4 +271,22 @@ impl HTMLable for WrapHeading {
         ret.text = ret.elem.text_content().unwrap();
         ret
     }
+}
+
+impl HTMLable for WrapDiceCanvas{
+    fn mount(&self) {
+        chk_append_child(self.id.as_str(), &self.elem);
+    }
+
+    fn set_visibilty(&mut self, is_visible: bool) {
+        chk_set_visbility(&self.elem.style(), is_visible)
+    }
+
+    fn new_from_id(id: &String) -> Self {
+        WrapDiceCanvas {
+            elem: get_T_from_id(id.as_str()),
+            id:id.clone(),
+        }
+    }
+
 }

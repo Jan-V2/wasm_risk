@@ -6,7 +6,6 @@ use crate::utils::funcs::rand_int;
 use gloo::console::log as console_log;
 use crate::ui::structs::{UiInfo, UiUpdatable};
 use crate::ui::main::UiState;
-use crate::canvas::get_dice_data;
 
 
 pub struct ProvLookupTable {
@@ -57,7 +56,6 @@ pub struct Game {
 
 impl Game {
     pub fn new(prov_lookup: ProvLookupTable) -> Game {
-        get_dice_data();
         return Game {
             model: Model::new_from_json(),
             prov_lookup,

@@ -40,7 +40,7 @@ pub fn template_game_end()->String{
 "#)
 }
 
-pub fn template_dice_roll(id_canvases:(&String, &String), next_btn:&String)->String{
+pub fn template_dice_roll(id_canvases:&(String, String), next_btn:&String)->String{
     const CANVAS_WIDTH: u32 = 300;
     const CANVAS_HEIGHT: u32 = 100;
     let mut buf = Buffer::new();
@@ -49,12 +49,12 @@ pub fn template_dice_roll(id_canvases:(&String, &String), next_btn:&String)->Str
     writeln!(attack.h4(), "Attacker rolled" ).unwrap();
     let _ = attack.canvas().attr(format!("width='{CANVAS_WIDTH}'").as_str())
         .attr(format!("height='{CANVAS_HEIGHT}'").as_str())
-        .attr(fmt_id(id_canvases.0).as_str());
+        .attr(fmt_id(&id_canvases.0).as_str());
     let mut defend = main.div().attr(fmt_style("margin-bottom: 15px;").as_str());
     writeln!(defend.h4(), "Defender rolled" ).unwrap();
     let _ = defend.canvas().attr(format!("width='{CANVAS_WIDTH}'").as_str())
         .attr(format!("height='{CANVAS_HEIGHT}'").as_str())
-        .attr(fmt_id(id_canvases.1).as_str());
+        .attr(fmt_id(&id_canvases.1).as_str());
     writeln!(buf.button().attr(fmt_id(next_btn).as_str()), "Next").unwrap();
 
     buf.finish()

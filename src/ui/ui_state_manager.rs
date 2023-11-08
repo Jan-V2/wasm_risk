@@ -1,9 +1,11 @@
 use std::rc::Rc;
 use std::cell::RefCell;
 use web_sys::{Document};
+use crate::canvas::{DiceFaceTex, get_dice_tex};
 use crate::element_getters::get_document;
 use crate::game::Game;
-use crate::ui::wrap_elem::{WrapBtn, WrapHtml, WrapDiv, WrapSelect, WrapHeading};
+use crate::model::CombatResult;
+use crate::ui::wrap_elem::{WrapBtn, WrapHtml, WrapDiv, WrapSelect, WrapHeading, WrapDiceCanvas};
 use crate::ui::templates::*;
 use crate::ui::traits::{HTML_Div, HTMLable};
 
@@ -301,17 +303,59 @@ impl StatefullView<StateCombat> for ViewCombat{
     }
 }
 
-#[derive(Clone, Default)]
-pub struct StateCombatEnd {
-    pub active: bool,
-    pub armies: u32,
+pub struct ViewDiceRoll {
+    state:CombatResult,
+    template:WrapHtml,
+    next_btn:WrapBtn,
+    canvas_top:WrapDiceCanvas,
+    canvas_bot:WrapDiceCanvas,
+    dice_face_texes:Rc<RefCell<Vec<DiceFaceTex>>>,
 }
 
-pub struct ViewCombatEnd{
-    state:StateArmyPlacement,
-    template:WrapHtml,
-    count_label: WrapDiv,
+impl StatefullView<CombatResult> for ViewDiceRoll{
+    fn create(doc: &Document) -> Self {
+        let id_canvases = (get_random_id(), get_random_id());
+        let id_next_btn = get_random_id();
+        let template = WrapHtml::new(doc, "dice_roll".to_string(),
+                                    template_dice_roll(&id_canvases, &id_next_btn).as_str());
+        template.mount();
+        ViewDiceRoll{
+            state: Default::default(),
+            template,
+            next_btn: WrapBtn::new_from_id(&id_next_btn),
+            canvas_top: WrapDiceCanvas::new_from_id(&id_canvases.0),
+            canvas_bot: WrapDiceCanvas::new_from_id(&id_canvases.1),
+            dice_face_texes: get_dice_tex(),
+        }
+    }
+
+    fn mount(&mut self) {
+        self.template.set_visibilty(false);
+    }
+
+    fn update(&mut self, state: CombatResult) {
+        self.state = state;
+        self.update_self()
+    }
+
+    fn update_self(&mut self) {
+        if self.state.combat_finished{
+            self.template.set_visibilty(false);
+        }else {
+            self.template.set_visibilty(true);
+            self.canvas_top.draw_dice_rolls(&self.state.dice_roll_attacker,
+                                            self.dice_face_texes.clone());
+            self.canvas_bot.draw_dice_rolls(&self.state.dice_roll_defender,
+                                            self.dice_face_texes.clone())
+        }
+
+    }
+
+    fn get(&self) -> CombatResult {
+        return self.state.clone()
+    }
 }
+
 
 #[derive(Clone, Default )]
 pub struct StateGameEnd {
@@ -331,7 +375,7 @@ pub enum Selected{
     StartPlace,
     Place,
     Combat,
-    Combat_end,
+    DiceRolling,
 }
 
 pub struct UiStateManager {
@@ -340,7 +384,9 @@ pub struct UiStateManager {
     pub start_army_placement: ViewStartArmyPlacement,
     pub army_placement:ViewArmyPlacement,
     pub selected:Selected,
-    pub combat:ViewCombat
+    pub combat:ViewCombat,
+    pub dice_rolls:ViewDiceRoll,
+    pub info_div:WrapDiv,
 }
 
 impl UiStateManager {
@@ -353,6 +399,8 @@ impl UiStateManager {
             army_placement: ViewArmyPlacement::create(&doc),
             selected: Selected::Header,
             combat: ViewCombat::create(&doc),
+            dice_rolls: ViewDiceRoll::create(&doc),
+            info_div: WrapDiv::new_from_id(&"info".to_string()),
         }
     }
 
@@ -360,7 +408,7 @@ impl UiStateManager {
         self.header.mount();
         self.start_army_placement.mount();
         self.army_placement.mount();
-       // self.combat.mount();
+        self.combat.mount();
     }
 
     pub fn update_all(&mut self){

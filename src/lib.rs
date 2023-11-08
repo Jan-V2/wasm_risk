@@ -14,7 +14,8 @@ use crate::canvas::get_map_lookup_data;
 use crate::game::Game;
 use crate::element_getters::{attach_handler_to_btn, get_button_by_id, /*get_element_by_id*/};
 use gloo::console::log as console_log;
-use crate::ui::ui_state_manager::{Selected, StateCombat, StatefullView, UiStateManager};
+use crate::model::CombatResult;
+use crate::ui::ui_state_manager::{ StateCombat, StatefullView, UiStateManager};
 
 #[wasm_bindgen(start)]
 fn setup() {
@@ -33,14 +34,16 @@ fn setup() {
 
     let mut ui_state = UiStateManager::build(refc_game.clone());
     ui_state.mount();
-    ui_state.combat.update(StateCombat{
-        active: true,
+
+
+/*    ui_state.combat.update(StateCombat{
+        active: false,
         attack_location:"West Europe".to_string(),
         armies_attacking:5,
         armies_defending:10,
         id_attacker: Some(1),
         id_defender:Some(3),
-    });
+    });*/
 /*
     let handler = Box::from(move|_|{
        let selected = ui_state.selected.clone();
@@ -76,8 +79,17 @@ fn setup() {
 
 
     let handler = Box::from(move|_|{
-        let selected = ui_state.selected.clone();
-        ui_state.update_all();
+//        let selected = ui_state.selected.clone();
+        //ui_state.update_all();
+        ui_state.dice_rolls.update(CombatResult{
+            armies_attacker:10,
+            armies_defender:5,
+            losses_defender:1,
+            losses_attacker:1,
+            dice_roll_attacker:vec![6,3,1],
+            dice_roll_defender :vec![5,5],
+            combat_finished:false
+        });
     });
 
     let btn = get_button_by_id("tester");

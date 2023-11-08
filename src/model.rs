@@ -51,13 +51,14 @@ impl Model{
     }
 }
 
-pub struct CombatData {
+#[derive(Clone, Default)]
+pub struct CombatResult {
     pub armies_attacker:u32,
     pub armies_defender:u32,
     pub losses_defender:u32,
     pub losses_attacker:u32,
-    pub dice_attacker:Vec<u32>,
-    pub dice_defender:Vec<u32>,
+    pub dice_roll_attacker:Vec<u32>,
+    pub dice_roll_defender :Vec<u32>,
     pub combat_finished:bool,
 }
 
@@ -74,7 +75,7 @@ impl CombatEngine{
     }
 
     pub fn next_round(&mut self, attacking_armies:u32, defending_armies:u32,
-                      attack_armies_active:u32, defence_armies_active:u32 ) -> CombatData {
+                      attack_armies_active:u32, defence_armies_active:u32 ) -> CombatResult {
         if attack_armies_active > attacking_armies
             || defence_armies_active > defending_armies{
             panic!("Incorrect number of attackers/defenders attacking {} out of {} defending {} out of {}",
@@ -112,18 +113,18 @@ impl CombatEngine{
         }
         sort_dice(&mut defending_dice);
 
-        let mut ret = CombatData {
+        let mut ret = CombatResult {
             armies_attacker: attacking_armies,
             armies_defender: defending_armies,
             losses_defender: 0,
             losses_attacker: 0,
-            dice_attacker: attacking_dice,
-            dice_defender: defending_dice,
+            dice_roll_attacker: attacking_dice,
+            dice_roll_defender: defending_dice,
             combat_finished: false,
         };
 
-        for i in 0..ret.dice_defender.len(){
-            if ret.dice_attacker[i] > ret.dice_defender[i]{
+        for i in 0..ret.dice_roll_defender.len(){
+            if ret.dice_roll_attacker[i] > ret.dice_roll_defender[i]{
                 ret.losses_defender += 1;
             }else {
                 ret.losses_attacker += 1;
