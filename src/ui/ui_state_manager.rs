@@ -4,8 +4,8 @@ use gloo::console::log;
 use wasm_bindgen::JsCast;
 use web_sys::{Document, HtmlOptionElement};
 use crate::canvas::{DiceFaceTex, get_dice_tex};
+use crate::ComBus;
 use crate::element_getters::get_document;
-use crate::game::Game;
 use crate::model::CombatResult;
 use crate::ui::wrap_elem::{WrapBtn, WrapHtml, WrapDiv, WrapSelect, WrapHeading, WrapDiceCanvas, chk_set_visbility};
 use crate::ui::templates::*;
@@ -28,13 +28,24 @@ pub trait StatefullView<T> {
     fn update(&mut self, state: T);
     fn update_self(&mut self);
     fn get(&self) -> T;
+    fn hide(&mut self);
+    fn show(&mut self);
+}
+
+pub trait UpdateableState{
+    fn update<F>(&mut self, f:F )where F: Fn(&mut Self){
+        f(self)
+    }
 }
 
 #[derive(Clone, Default)]
 pub struct StateArmyPlacement {
     pub active: bool,
     pub armies: u32,
+    pub active_player: u32,
 }
+impl UpdateableState for StateArmyPlacement{}
+
 
 pub struct ViewArmyPlacement{
     pub state:StateArmyPlacement,
@@ -42,6 +53,7 @@ pub struct ViewArmyPlacement{
     count_label: WrapDiv,
     mounted:bool,
 }
+
 
 impl StatefullView<StateArmyPlacement> for ViewArmyPlacement{
     fn create(doc: &Document) -> Self {
@@ -74,23 +86,37 @@ impl StatefullView<StateArmyPlacement> for ViewArmyPlacement{
     }
 
     fn update_self(&mut self) {
-        self.count_label.set_text(format!("You still need to Place {} armies", self.state.armies));
+        self.count_label.set_text(format!("You still need to Place {} armies",
+                                          self.state.armies));
         self.template.set_visibilty(self.state.active);
     }
 
     fn get(&self) -> StateArmyPlacement {
         self.state.clone()
     }
+
+    fn hide(&mut self) {
+        self.state.active =false;
+        self.update_self();
+    }
+
+    fn show(&mut self) {
+        self.state.active =false;
+        self.update_self();
+    }
 }
 
 
-#[derive(Clone, Default)]
+#[derive(Clone, Default, Debug)]
 pub struct StateStartArmyPlacement {
     pub active: bool,
     pub current_player: u32,
     pub num_players:u32,
     pub armies: [u32; 6],
 }
+
+impl UpdateableState for StateStartArmyPlacement{}
+
 
 pub struct ViewStartArmyPlacement {
     pub state: StateStartArmyPlacement,
@@ -143,6 +169,17 @@ impl StatefullView<StateStartArmyPlacement> for ViewStartArmyPlacement {
     fn get(&self) -> StateStartArmyPlacement {
         self.state.clone()
     }
+
+
+    fn hide(&mut self) {
+        self.state.active =false;
+        self.update_self();
+    }
+
+    fn show(&mut self) {
+        self.state.active =false;
+        self.update_self();
+    }
 }
 
 
@@ -151,6 +188,9 @@ pub struct StateHeader {
     pub active: bool,
     pub text: String,
 }
+impl UpdateableState for StateHeader{}
+
+
 
 pub struct ViewHeader{
 //    template:WrapHtml,
@@ -163,7 +203,7 @@ impl StatefullView<StateHeader> for ViewHeader{
     fn create(doc: &Document) -> Self {
         let mut ret = ViewHeader{
             state: StateHeader{
-                active: true,
+                active: false,
                 text: "Player 1".to_string(),
             },
             text_label: WrapDiv::new(doc, "header".to_string(), "".to_string()),
@@ -179,8 +219,9 @@ impl StatefullView<StateHeader> for ViewHeader{
             panic!("component is already mounted")
         }
         self.mounted = true;
-        self.update_self();
         self.text_label.mount();
+        self.update_self();
+
     }
 
     fn update(&mut self, state: StateHeader) {
@@ -195,6 +236,17 @@ impl StatefullView<StateHeader> for ViewHeader{
     fn get(&self) -> StateHeader {
         self.state.clone()
     }
+
+
+    fn hide(&mut self) {
+        self.state.active =false;
+        self.update_self();
+    }
+
+    fn show(&mut self) {
+        self.state.active =false;
+        self.update_self();
+    }
 }
 
 
@@ -203,6 +255,8 @@ pub struct StateTurnStart {
     pub active: bool,
     pub armies: u32,
 }
+impl UpdateableState for StateTurnStart{}
+
 
 pub struct ViewTurnStart{
     template:WrapHtml,
@@ -220,6 +274,9 @@ pub struct StateCombat {
     pub id_attacker:Option<u32>,
     pub id_defender:Option<u32>,
 }
+
+impl UpdateableState for StateCombat{}
+
 
 pub struct CombatArmySelect{
     main:WrapDiv,
@@ -327,6 +384,17 @@ impl StatefullView<StateCombat> for ViewCombat{
     fn get(&self) -> StateCombat {
         self.state.clone()
     }
+
+
+    fn hide(&mut self) {
+        self.state.active =false;
+        self.update_self();
+    }
+
+    fn show(&mut self) {
+        self.state.active =false;
+        self.update_self();
+    }
 }
 
 pub struct ViewDiceRoll {
@@ -380,6 +448,16 @@ impl StatefullView<CombatResult> for ViewDiceRoll{
     fn get(&self) -> CombatResult {
         return self.state.clone()
     }
+
+    fn hide(&mut self) {
+        self.state.combat_finished=true;
+        self.update_self();
+    }
+
+    fn show(&mut self) {
+        self.state.combat_finished =false;
+        self.update_self();
+    }
 }
 
 
@@ -396,7 +474,7 @@ pub struct ViewGameEnd{
 }
 
 #[derive(Clone )]
-pub enum Selected{
+pub enum SelectedView {
     Header,
     StartPlace,
     Place,
@@ -405,25 +483,25 @@ pub enum Selected{
 }
 
 pub struct UiStateManager {
-    game_ref: Rc<RefCell<Game>>,
+    com_bus:Rc<ComBus>,
     pub header:ViewHeader,
     pub start_army_placement: ViewStartArmyPlacement,
     pub army_placement:ViewArmyPlacement,
-    pub selected:Selected,
+    pub selected: SelectedView,
     pub combat:ViewCombat,
     pub dice_rolls:ViewDiceRoll,
     pub info_div:WrapDiv,
 }
 
 impl UiStateManager {
-    pub fn build(game_ref: Rc<RefCell<Game>>) -> UiStateManager {
+    pub fn build(com_bus: Rc<ComBus>) -> UiStateManager {
         let doc = get_document();
         UiStateManager {
-            game_ref,
+            com_bus,
             header: ViewHeader::create(&doc),
             start_army_placement: ViewStartArmyPlacement::create(&doc),
             army_placement: ViewArmyPlacement::create(&doc),
-            selected: Selected::Header,
+            selected: SelectedView::Header,
             combat: ViewCombat::create(&doc),
             dice_rolls: ViewDiceRoll::create(&doc),
             info_div: WrapDiv::new_from_id(&"info".to_string()),
@@ -434,7 +512,7 @@ impl UiStateManager {
         self.header.mount();
         self.start_army_placement.mount();
         self.army_placement.mount();
-        //self.combat.mount();
+        self.combat.mount();
         self.dice_rolls.mount();
     }
 
@@ -442,7 +520,31 @@ impl UiStateManager {
         self.header.update_self();
         self.start_army_placement.update_self();
         self.army_placement.update_self();
+        self.combat.update_self();
+        self.dice_rolls.update_self();
     }
+
+    pub fn select_view(&mut self, view:Option<SelectedView>){
+        self.hide_all();
+        if view.is_some(){
+            match view.unwrap() {
+                SelectedView::Header => { self.header.show()}
+                SelectedView::StartPlace => {self.start_army_placement.show()}
+                SelectedView::Place => {self.army_placement.show()}
+                SelectedView::Combat => {self.combat.show()}
+                SelectedView::DiceRolling => {self.dice_rolls.show()}
+            }
+        }
+    }
+
+    fn hide_all(&mut self){
+        self.header.hide();
+        self.start_army_placement.hide();
+        self.army_placement.hide();
+        self.combat.hide();
+        self.dice_rolls.hide();
+    }
+
 
 }
 

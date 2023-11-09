@@ -11,16 +11,14 @@ pub trait UiUpdatable {
 #[derive(Clone, Copy)]
 pub struct UiInfo{
     pub ui_state: Signal<UiState>,
-    pub start_placement:Signal<StartArmyPlacementInfo>,
-    pub placement:Signal<ArmyPlacementInfo>,
+
 }
 
 impl UiInfo {
     pub fn new()->UiInfo{
         UiInfo{
             ui_state:create_signal(UiState::SETUP),
-            start_placement: create_signal(StartArmyPlacementInfo::new()),
-            placement: create_signal(ArmyPlacementInfo::new()),
+
         }
     }
 }

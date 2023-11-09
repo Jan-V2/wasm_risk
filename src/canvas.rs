@@ -173,10 +173,8 @@ fn draw_board_raw(canvas: &HtmlCanvasElement, context: &CanvasRenderingContext2d
 }
 
 pub struct DiceFaceTex{
-    width:u32,
-    height:u32,
+    size:u32,
     img_data:Clamped<Vec<u8>>,
-    face_number:u32,
     bitmap:Option<ImageBitmap>,
 }
 
@@ -208,10 +206,8 @@ pub fn get_dice_tex() -> Rc<RefCell<Vec<DiceFaceTex>>>{
     for face_row in 0..texes_along_width {
         for face_col in 0..texes_along_height {
             let mut new_face = DiceFaceTex{
-                width: face_width,
-                height: face_height,
+                size: face_width,
                 img_data: Clamped(Vec::new()),
-                face_number: (face_row + face_col * texes_along_width) + 1,
                 bitmap: None,
             };
 
@@ -235,7 +231,7 @@ pub fn get_dice_tex() -> Rc<RefCell<Vec<DiceFaceTex>>>{
     spawn_local(async move {
         for dice in &mut *rc.borrow_mut(){
             let test = ImageData::new_with_u8_clamped_array(
-                Clamped(dice.img_data.0.as_slice()), dice.width).unwrap();
+                Clamped(dice.img_data.0.as_slice()), dice.size).unwrap();
             let tex_future = JsFuture::from(
                 web_sys::window().unwrap().create_image_bitmap_with_image_data(&test).unwrap());
             let tex = tex_future.await.unwrap().dyn_into::<ImageBitmap>().unwrap();

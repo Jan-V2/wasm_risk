@@ -1,11 +1,14 @@
+use std::rc::Rc;
 use js_sys::Math::sqrt;
 use crate::element_getters::set_info_field;
 use crate::model::{Coord, Model, Player, Rules};
 use crate::ui::player_setup::PlayerConfig;
 use crate::utils::funcs::rand_int;
 use gloo::console::log as console_log;
-use crate::ui::structs::{UiInfo, UiUpdatable};
+use crate::ComBus;
+use crate::ui::structs::{UiInfo};
 use crate::ui::main::UiState;
+use crate::ui::ui_state_manager::{UpdateableState};
 
 
 pub struct ProvLookupTable {
@@ -51,16 +54,18 @@ pub struct Game {
     prov_lookup: ProvLookupTable,
     flag_scale: f64,
     ui_info: Option<UiInfo>,
+    com_bus:Rc<ComBus>,
 }
 
 
 impl Game {
-    pub fn new(prov_lookup: ProvLookupTable) -> Game {
+    pub fn new(prov_lookup: ProvLookupTable, com_bus:Rc<ComBus>) -> Game {
         return Game {
             model: Model::new_from_json(),
             prov_lookup,
             flag_scale: 0.5,
             ui_info: None,
+            com_bus
         };
     }
 
@@ -102,15 +107,17 @@ impl Game {
         let armies_per_player = Rules::armies_per_players_start(config.player_count as u32).unwrap();
         self.assign_provs_random();
 
+
         let provs = &self.model.provinces;
-        self.ui_info_ref().start_placement.set(self.ui_info_ref().start_placement.get().update(|tmp| {
-            tmp.num_players = config.player_count as u32;
-            for i in 0..tmp.num_players as usize {
-                let armies = armies_per_player - self.model.players[i].get_owned_provs(provs).len() as u32;
-                console_log!(format!("found {} armies for player {}", armies, i));
-                tmp.armies_per_player[i] = armies;
+
+        self.com_bus.get_ui().borrow_mut().start_army_placement.state.update(|state|{
+            state.num_players = config.player_count as u32;
+            for i in 0..state.num_players as usize{
+                state.armies[i] = armies_per_player - self.model.players[i].get_owned_provs(provs).len() as u32;
+                console_log!(format!("found {} armies for player {}", state.armies[i], i));
+
             }
-        }));
+        });
 
         self.draw_board();
     }
@@ -195,39 +202,61 @@ impl Game {
     fn handle_army_placement(&mut self, prov_id: u32, placement_start: bool) {
         console_log!(format!("running placement id {}, start {}", prov_id, placement_start));
         let armies_available: u32 = if placement_start {
-            let tmp = self.ui_info_ref().start_placement.get();
-            tmp.armies_per_player[tmp.current_player as usize]
+            let tmp = self.com_bus.get_ui().borrow().start_army_placement.state.clone();
+            tmp.armies[tmp.current_player as usize]
         } else {
-            let tmp = self.ui_info_ref().placement.get();
-            tmp.army_count
+            self.com_bus.get_ui().borrow().army_placement.state.armies
         };
 
 
         if armies_available > 0 {
             self.change_armies_in_prov(1, &prov_id);
             if placement_start {
-                self.ui_info_ref().start_placement.set(self.ui_info_ref().start_placement.get().update(|tmp| {
-                    tmp.armies_per_player[tmp.current_player as usize] = armies_available - 1;
-                    if armies_available == 1 {
-                        tmp.is_done = true;
+
+                self.com_bus.get_ui().borrow_mut().start_army_placement.state.update(|state |{
+                    state.armies[state.current_player as usize] -=1;
+                    if state.armies[state.current_player as usize] == 0{
+                        if state.current_player + 1 < state.num_players{
+                            state.current_player += 1;
+                        }else {
+                            state.active = false;
+                            //self.next_state() todo
+                        }
                     }
-                }))
+                });
             } else {
-                self.ui_info_ref().placement.set(self.ui_info_ref().placement.get().update(|tmp| {
-                    tmp.army_count = armies_available - 1;
-                    if armies_available == 1 {
-                        tmp.is_done = true;
+                self.com_bus.get_ui().borrow_mut().army_placement.state.update(|state |{
+                    state.armies -= 1;
+                    if state.armies == 0{
+                        state.active = false;
+                        //todo next state
                     }
-                }))
+                });
             }
         } else {
-            /*if placement_start {
-                panic!("in placement state, with 0 armies to Place {:?}", self.ui_info_ref().start_placement.get());
+            if placement_start {
+                panic!("in placement state, with 0 armies to Place {:?}",
+                       self.com_bus.get_ui().borrow().start_army_placement.state);
             } else {
-                panic!("in placement state, with 0 armies to Place {:?}", self.ui_info_ref().placement.get());
-            };*/
+                panic!("in placement state, with 0 armies to Place {:?}",
+                       self.com_bus.get_ui().borrow().start_army_placement.state);
+            };
         }
+        self.com_bus.get_ui().borrow_mut().update_all();
         self.draw_board();
+    }
+
+    fn next_state(&mut self){
+        match self.ui_info_ref().ui_state.get() {
+            UiState::SETUP => {}
+            UiState::ARMY_PLACEMENT_START => {}
+            UiState::ARMY_PLACEMENT => {}
+            UiState::TURN_START => {}
+            UiState::TURN => {}
+            UiState::COMBAT => {}
+            UiState::GAME_END => {}
+            UiState::CARD_SELECT => {}
+        }
     }
 
     pub fn nav_tree_end_add(&mut self) {
@@ -235,7 +264,7 @@ impl Game {
     }
 
     pub fn nav_tree_dump(&self) {
-        gloo::console::log!("dumping");
+        gloo::console::log!("dumping nav tree");
         gloo::console::log!(serde_json::to_string(&self.model.nav_tree).unwrap());
     }
 
