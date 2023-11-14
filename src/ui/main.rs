@@ -43,7 +43,7 @@ pub fn UiSide<G: Html>(props: UiMainProps) -> View<G> {
 
         }else{
             view!{
-                div { "default ui state" }
+                div { }
             }
         })
     }}

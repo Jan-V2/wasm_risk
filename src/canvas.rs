@@ -35,8 +35,8 @@ pub fn ui_init_canvas(game_model: Rc<RefCell<Game>>) {
     let game_model_clone = game_model.clone();
 
     let canvas_xy_mouseover_handeler = Closure::<dyn FnMut(_)>::new(move |event: MouseEvent| {
-        let label = get_html_label_by_id("xy_coord_label");
-        label.set_inner_text(&format!("canvas coord x:{} y:{}", event.offset_x(), event.offset_y()));
+       //let label = get_html_label_by_id("xy_coord_label");
+        //label.set_inner_text(&format!("canvas coord x:{} y:{}", event.offset_x(), event.offset_y()));
 
         let mut text:Option<String> = None;
         let game_borrow = game_model_clone.as_ref().try_borrow();
@@ -48,7 +48,6 @@ pub fn ui_init_canvas(game_model: Rc<RefCell<Game>>) {
             });
             game_unwrap.draw_board();
         }
-
 
 
         if text.is_some(){
@@ -66,7 +65,8 @@ pub fn ui_init_canvas(game_model: Rc<RefCell<Game>>) {
 
 
     });
-    let _ = canvas.add_event_listener_with_callback("mousemove", canvas_xy_mouseover_handeler.as_ref().unchecked_ref());
+    let _ = canvas.add_event_listener_with_callback("mousemove",
+         canvas_xy_mouseover_handeler.as_ref().unchecked_ref());
     canvas_xy_mouseover_handeler.forget();
 
     let canvas_click_handler = Closure::<dyn FnMut(_)>::new(move |_event: MouseEvent| {

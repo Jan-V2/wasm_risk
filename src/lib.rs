@@ -17,6 +17,7 @@ use gloo::console::log as console_log;
 use sycamore::prelude::create_signal;
 use crate::ui::main::UiMainProps;
 use crate::ui::ui_state_manager::{ UiStateManager};
+use crate::utils::funcs::rand_int;
 
 pub struct ComBus{
     game_ref:Option<Rc<RefCell<Game>>>,
@@ -52,21 +53,28 @@ impl ComBus {
 fn setup() {
     console_error_panic_hook::set_once();
 
-    let mut prov_coords: Vec<[i32; 2]> = Vec::new();
-    prov_coords.push([388, 204]);
     console_log!("starting");
-    let com_bus = Rc::from(ComBus::new());
 
-    let game = Game::new(get_map_lookup_data(50), com_bus.clone());
-    //update_prov_data();
-
-
+    let game = Game::new(get_map_lookup_data(50), true);
     let refc_game = Rc::from(RefCell::from(game));
-    canvas::ui_init_canvas(refc_game.clone());
-    //html_elem_setup::setup_tree_builder_btns(refc_game.clone());
 
-    let mut ui_state = UiStateManager::build(com_bus);
+    let mut ui_state = UiStateManager::build();
     ui_state.mount();
+    let refc_ui = Rc::from(RefCell::from(ui_state));
+
+
+    let mut com_bus = ComBus::new();
+    com_bus.add_game(refc_game.clone());
+    com_bus.add_ui_manager(refc_ui.clone());
+    let combus_rc = Rc::from(com_bus);
+
+    refc_game.borrow_mut().add_combus(combus_rc.clone());
+    refc_ui.borrow_mut().add_combus(combus_rc);
+
+
+    canvas::ui_init_canvas(refc_game.clone());
+
+
 
 
 /*

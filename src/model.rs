@@ -49,9 +49,17 @@ impl Model{
             "prov not found".to_string()
         }
     }
+
+    pub fn get_owner_from_prov_id(&self, prov_id:&u32)-> Option<u32>{
+        let prov = self.get_prov_from_id(prov_id);
+        if prov.is_some(){
+            return Some(prov.unwrap().owner_id)
+        }
+        None
+    }
 }
 
-#[derive(Clone, Default)]
+#[derive(Clone, Debug)]
 pub struct CombatResult {
     pub armies_attacker:u32,
     pub armies_defender:u32,
@@ -60,6 +68,20 @@ pub struct CombatResult {
     pub dice_roll_attacker:Vec<u32>,
     pub dice_roll_defender :Vec<u32>,
     pub combat_finished:bool,
+}
+
+impl CombatResult {
+    pub fn new()->CombatResult{
+        CombatResult{
+            armies_attacker: 0,
+            armies_defender: 0,
+            losses_defender: 0,
+            losses_attacker: 0,
+            dice_roll_attacker: vec![],
+            dice_roll_defender: vec![],
+            combat_finished: true,//todo flip this and use default derive
+        }
+    }
 }
 
 pub struct CombatEngine{
@@ -400,7 +422,7 @@ impl NavTree {
 
 
 
-
+#[derive(Debug)]
 pub struct Player{
     pub id:u32,
     pub cards:Vec<TerritoryCardType>,

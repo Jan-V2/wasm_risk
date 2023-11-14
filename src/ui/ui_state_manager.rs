@@ -10,6 +10,8 @@ use crate::model::CombatResult;
 use crate::ui::wrap_elem::{WrapBtn, WrapHtml, WrapDiv, WrapSelect, WrapHeading, WrapDiceCanvas, chk_set_visbility};
 use crate::ui::templates::*;
 use crate::ui::traits::{HTML_Div, HTMLable};
+use gloo::console::log as console_log;
+
 
 const ALPHABET_LEN:usize = 26;
 const ASCII_LOWER: [char; ALPHABET_LEN] = [
@@ -414,7 +416,7 @@ impl StatefullView<CombatResult> for ViewDiceRoll{
                                     template_dice_roll(&id_canvases, &id_next_btn).as_str());
         template.mount();
         ViewDiceRoll{
-            state: Default::default(),
+            state: CombatResult::new(),
             template,
             next_btn: WrapBtn::new_from_id(&id_next_btn),
             canvas_top: WrapDiceCanvas::new_from_id(&id_canvases.0),
@@ -433,6 +435,7 @@ impl StatefullView<CombatResult> for ViewDiceRoll{
     }
 
     fn update_self(&mut self) {
+        console_log!(format!("{:?}", self.state));
         if self.state.combat_finished{
             self.template.set_visibilty(false);
         }else {
@@ -483,7 +486,7 @@ pub enum SelectedView {
 }
 
 pub struct UiStateManager {
-    com_bus:Rc<ComBus>,
+    com_bus:Option<Rc<ComBus>>,
     pub header:ViewHeader,
     pub start_army_placement: ViewStartArmyPlacement,
     pub army_placement:ViewArmyPlacement,
@@ -494,10 +497,10 @@ pub struct UiStateManager {
 }
 
 impl UiStateManager {
-    pub fn build(com_bus: Rc<ComBus>) -> UiStateManager {
+    pub fn build() -> UiStateManager {
         let doc = get_document();
         UiStateManager {
-            com_bus,
+            com_bus:None,
             header: ViewHeader::create(&doc),
             start_army_placement: ViewStartArmyPlacement::create(&doc),
             army_placement: ViewArmyPlacement::create(&doc),
@@ -506,6 +509,10 @@ impl UiStateManager {
             dice_rolls: ViewDiceRoll::create(&doc),
             info_div: WrapDiv::new_from_id(&"info".to_string()),
         }
+    }
+
+    pub fn add_combus(&mut self, com_bus:Rc<ComBus>){
+        self.com_bus = Some(com_bus)
     }
 
     pub fn mount(&mut self) {

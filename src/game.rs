@@ -54,19 +54,25 @@ pub struct Game {
     prov_lookup: ProvLookupTable,
     flag_scale: f64,
     ui_info: Option<UiInfo>,
-    com_bus:Rc<ComBus>,
+    com_bus:Option<Rc<ComBus>>,
+    logging:bool,
 }
 
 
 impl Game {
-    pub fn new(prov_lookup: ProvLookupTable, com_bus:Rc<ComBus>) -> Game {
+    pub fn new(prov_lookup: ProvLookupTable, use_logging:bool) -> Game {
         return Game {
             model: Model::new_from_json(),
             prov_lookup,
             flag_scale: 0.5,
             ui_info: None,
-            com_bus
+            com_bus:None,
+            logging: use_logging,
         };
+    }
+
+    pub fn add_combus(&mut self, com_bus:Rc<ComBus>){
+        self.com_bus = Some(com_bus)
     }
 
     fn ui_info_ref(&self) -> &UiInfo {
@@ -84,18 +90,38 @@ impl Game {
     fn assign_provs_random(&mut self) {
         // todo make this not a random number per player
         gloo::console::log!(format!("players len = {}", self.model.players.len()));
-        let player_count = self.model.players.len() as i32;
-        for i in 0..self.model.provinces.len() {
-            let idx = rand_int(0, player_count as u32) as i32;
-            if idx < player_count {
-                self.model.provinces[i].owner_id = idx as u32;
-                self.model.provinces[i].army_count = 1;
+        let player_count = self.model.players.len();
+        let prov_total = self.model.provinces.len() as u32;
+
+        let mut provs_available:Vec<u32> = vec![];
+        let provs_per_player = prov_total / player_count as u32;
+        let mut remainder = prov_total % player_count as u32;
+
+        for player_id in 0..player_count{
+            provs_available.push(provs_per_player);
+            if remainder > 0{
+                provs_available[player_id] +=1;
+                remainder -= 1;
             }
         }
+
+        let mut provs_vec:Vec<_> = (0..prov_total).collect();
+
+        for p in 0..player_count{
+            for _ in 0..provs_available[p]{
+                let idx = rand_int(0, (provs_vec.len() -1) as u32) as usize;
+                self.model.provinces[provs_vec[idx] as usize].owner_id = p as u32;
+                self.model.provinces[provs_vec[idx] as usize].army_count = 1;
+                provs_vec.remove(idx);
+            }
+        }
+
+
     }
 
     pub fn set_player_config(&mut self, config: PlayerConfig) {
         gloo::console::log!(format!("player count = {}", config.player_count));
+        gloo::console::log!(format!("{:?}", config));
         for i in 0..config.player_count {
             self.model.players.push(Player {
                 id: i as u32,
@@ -104,20 +130,29 @@ impl Game {
                 is_computer: config.player_is_ai[i as usize],
             })
         }
+        self.log(format!("{:?}", self.model.players));
         let armies_per_player = Rules::armies_per_players_start(config.player_count as u32).unwrap();
         self.assign_provs_random();
 
 
         let provs = &self.model.provinces;
+        let mut count_id = vec![0u32; config.player_count as usize];
+        for prov in provs{
+            count_id[prov.owner_id as usize] += 1;
+        }
+        self.log(format!("provinces per player {:?}", count_id));
 
-        self.com_bus.get_ui().borrow_mut().start_army_placement.state.update(|state|{
+        self.com_bus.as_ref().unwrap().get_ui().borrow_mut().start_army_placement.state.update(|state|{
+            state.active = true;
             state.num_players = config.player_count as u32;
             for i in 0..state.num_players as usize{
                 state.armies[i] = armies_per_player - self.model.players[i].get_owned_provs(provs).len() as u32;
-                console_log!(format!("found {} armies for player {}", state.armies[i], i));
+                self.log(format!("found {} armies for player {}", state.armies[i], i));
 
             }
         });
+        self.com_bus.as_ref().unwrap().get_ui().borrow_mut().update_all();
+        self.ui_info.unwrap().ui_state.set(UiState::ARMY_PLACEMENT_START);
 
         self.draw_board();
     }
@@ -175,6 +210,14 @@ impl Game {
         }
     }
 
+    fn is_owned_by_active(&self, prov_id:&u32)->bool{
+        let owner = self.model.get_owner_from_prov_id(prov_id);
+        if owner.is_some(){
+            return owner.unwrap() == self.ui_info.unwrap().active_player.get();
+        }
+        false
+    }
+
     pub fn handle_canvas_click(&mut self, clicked_coord: Coord) {
         let prov_str = self.get_prov_location_string(&clicked_coord);
         if prov_str.is_some() {
@@ -199,13 +242,38 @@ impl Game {
         }
     }
 
+    fn set_ui_state(&mut self, state:UiState){
+        self.ui_info.unwrap().ui_state.set(state)
+    }
+
+    fn get_ui_state(&mut self)->UiState{
+        self.ui_info.unwrap().ui_state.get()
+    }
+
+    fn set_active_player(&mut self, active_player:u32){
+        self.ui_info.unwrap().active_player.set(active_player)
+    }
+
+    fn get_active_player(&mut self)->u32{
+        self.ui_info.unwrap().active_player.get()
+    }
+
+    fn handle_turn(&mut self, prov_id:u32){
+        self.log("turn".to_string())
+    }
+
     fn handle_army_placement(&mut self, prov_id: u32, placement_start: bool) {
+        if !self.is_owned_by_active(&prov_id){
+            self.log("placement: prov not owned by active player".to_string());
+            return;
+        }
+
         console_log!(format!("running placement id {}, start {}", prov_id, placement_start));
         let armies_available: u32 = if placement_start {
-            let tmp = self.com_bus.get_ui().borrow().start_army_placement.state.clone();
+            let tmp = self.com_bus.as_ref().unwrap().get_ui().borrow().start_army_placement.state.clone();
             tmp.armies[tmp.current_player as usize]
         } else {
-            self.com_bus.get_ui().borrow().army_placement.state.armies
+            self.com_bus.as_ref().unwrap().get_ui().borrow().army_placement.state.armies
         };
 
 
@@ -213,36 +281,37 @@ impl Game {
             self.change_armies_in_prov(1, &prov_id);
             if placement_start {
 
-                self.com_bus.get_ui().borrow_mut().start_army_placement.state.update(|state |{
+                self.com_bus.as_ref().unwrap().get_ui().borrow_mut().
+                    start_army_placement.state.update(|state |{
                     state.armies[state.current_player as usize] -=1;
                     if state.armies[state.current_player as usize] == 0{
                         if state.current_player + 1 < state.num_players{
                             state.current_player += 1;
+                            self.ui_info.unwrap().active_player.set(state.current_player);
                         }else {
                             state.active = false;
-                            //self.next_state() todo
+                            self.ui_info.unwrap().active_player.set(0);
+                            self.ui_info.unwrap().ui_state.set(UiState::TURN);
                         }
                     }
                 });
             } else {
-                self.com_bus.get_ui().borrow_mut().army_placement.state.update(|state |{
+                self.com_bus.as_ref().unwrap().get_ui().borrow_mut().
+                    army_placement.state.update(|state |{
                     state.armies -= 1;
                     if state.armies == 0{
                         state.active = false;
                         //todo next state
+
                     }
                 });
             }
         } else {
-            if placement_start {
-                panic!("in placement state, with 0 armies to Place {:?}",
-                       self.com_bus.get_ui().borrow().start_army_placement.state);
-            } else {
-                panic!("in placement state, with 0 armies to Place {:?}",
-                       self.com_bus.get_ui().borrow().start_army_placement.state);
-            };
+            panic!("in placement state, with 0 armies to Place {:?}",
+                       self.com_bus.as_ref().unwrap().get_ui().borrow().start_army_placement.state);
+
         }
-        self.com_bus.get_ui().borrow_mut().update_all();
+        self.com_bus.as_ref().unwrap().get_ui().borrow_mut().update_all();
         self.draw_board();
     }
 
@@ -286,6 +355,12 @@ impl Game {
         }
     }
 
+
+    fn log(&self, msg:String){
+        if self.logging{
+            console_log!(msg)
+        }
+    }
 
     pub fn set_ui_info(&mut self, info: UiInfo) {
         self.ui_info = Some(info);

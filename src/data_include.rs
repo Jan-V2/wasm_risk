@@ -391,7 +391,7 @@ pub fn get_map_data() -> String {
     "army_count": 0,
     "location": {
       "x": 766,
-      "y": 149
+      "y": 155
     },
     "continent": "Asia",
     "card_type": "Artillery"

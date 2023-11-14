@@ -11,14 +11,14 @@ pub trait UiUpdatable {
 #[derive(Clone, Copy)]
 pub struct UiInfo{
     pub ui_state: Signal<UiState>,
-
+    pub active_player: Signal<u32>,
 }
 
 impl UiInfo {
     pub fn new()->UiInfo{
         UiInfo{
             ui_state:create_signal(UiState::SETUP),
-
+            active_player: create_signal(0),
         }
     }
 }

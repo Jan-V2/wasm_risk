@@ -1,7 +1,7 @@
 #![allow(dead_code)]
 
 use wasm_bindgen::prelude::*;
-use web_sys::{CanvasRenderingContext2d, Document, Element, HtmlButtonElement, HtmlCanvasElement, HtmlInputElement, HtmlLabelElement, MouseEvent};
+use web_sys::{CanvasRenderingContext2d, Document, Element, HtmlButtonElement, HtmlCanvasElement, HtmlDivElement, HtmlInputElement, HtmlLabelElement, MouseEvent};
 
 
 pub fn get_html_label_by_id(id :&str) -> HtmlLabelElement{
@@ -42,7 +42,7 @@ pub fn get_T_from_id<T>(id:&str) ->T   where T:JsCast{
 }
 
 pub fn set_info_field(string:String){
-    let elem = get_element_by_id("text_out").dyn_into::<HtmlLabelElement>()
+    let elem = get_element_by_id("text_out").dyn_into::<HtmlDivElement>()
         .map_err(|_| ()).unwrap();
     elem.set_inner_text(&format!("{}", string));
 }
