@@ -40,6 +40,18 @@ pub fn template_game_end()->String{
 "#)
 }
 
+pub fn template_turn_menu(player_label:&String, btn_reinforce:&String, btn_next_turn:&String)->String{
+
+    let mut buf = Buffer::new();
+    let mut main  = buf.div();
+    writeln!(main.div().attr(
+        fmt_style("margin-bottom: 15px;").as_str()).attr(fmt_id(player_label).as_str())
+             , "Player:").unwrap();
+    writeln!(main.button().attr(fmt_id(btn_reinforce).as_str()), "Reinforce").unwrap();
+    writeln!(main.button().attr(fmt_id(btn_next_turn).as_str()), "Next turn").unwrap();
+    buf.finish()
+}
+
 pub fn template_dice_roll(id_canvases:&(String, String), next_btn:&String)->String{
     const CANVAS_WIDTH: u32 = 300;
     const CANVAS_HEIGHT: u32 = 100;

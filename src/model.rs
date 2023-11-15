@@ -262,60 +262,42 @@ impl NavNode {
     }
 }
 
-type ProvId = u32;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct NavTree{
     nav_nodes:Vec<NavNode>,
     pub adding_id_set:bool,
-    adding_to:u32,
-    currently_selected:ProvId, // make this a &province rather than id?
-    pub selection_active:bool,
+    adding_to:u32
 }
 
 #[allow(dead_code)]
 impl NavTree {
-    pub fn new()->NavTree{
-        NavTree{
+    pub fn new()->NavTree {
+        NavTree {
             nav_nodes: vec![],
             adding_id_set: false,
             adding_to: 0,
-            currently_selected: 0,
-            selection_active: false,
         }
     }
 
-    pub fn select_prov(&mut self, prov_id:u32){
-        self.currently_selected = prov_id;
-        self.selection_active = true
-    }
-
-    pub fn deselect(&mut self){
-        self.selection_active = false
-    }
-
-    fn validate_nav(&self, to:u32)->bool{
-        if !self.selection_active{
-            gloo::console::log!("can't navigate, no selection");
-            false;
-        }
-        if self.currently_selected == to{
+    fn validate_nav(&self, to:&u32, from:&u32)->bool{
+        if from == to{
             gloo::console::log!("can't navigate, to and from are the same");
             false;
         }
         true
     }
 
-    pub fn navigate_adjacent(&self, to:u32) ->Option<bool>{
-        if !self.validate_nav(to){
+    pub fn navigate_adjacent(&self,  to:u32, from:u32) ->Option<bool>{
+        if !self.validate_nav(&to, &from){
             return None
         }
-        return Some(self.get_node_from_id(&self.currently_selected).unwrap().connections.contains(&to));
+        return Some(self.get_node_from_id(
+            &from).unwrap().connections.contains(&to));
     }
 
-  //  #[allow(unused_variables)]
-    pub fn navigate_move(&self, to:u32, provs:&Vec<Province>) -> Option<bool>{
-        if !self.validate_nav(to){
+    pub fn navigate_move(&self, to:u32, from:u32, provs:&Vec<Province>) -> Option<bool>{
+        if !self.validate_nav(&to, &from){
             return None
         }
         let mut visited:Vec<u32> = Vec::new();
@@ -327,9 +309,9 @@ impl NavTree {
             }
             None
         };
-        let target_owner = get_prov_with_id(&self.currently_selected).unwrap().owner_id;
+        let target_owner = get_prov_with_id(&from).unwrap().owner_id;
         let mut visit_q:Queue<&Province> = Queue::new();
-        let _ = visit_q.add(get_prov_with_id(&self.currently_selected).unwrap());
+        let _ = visit_q.add(get_prov_with_id(&from).unwrap());
 
         while visit_q.size() > 0{
             let curr_prov_id = visit_q.remove().unwrap().id;
@@ -416,8 +398,6 @@ impl NavTree {
         }
         None
     }
-
-
 }
 
 

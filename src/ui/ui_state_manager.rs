@@ -11,6 +11,7 @@ use crate::ui::wrap_elem::{WrapBtn, WrapHtml, WrapDiv, WrapSelect, WrapHeading, 
 use crate::ui::templates::*;
 use crate::ui::traits::{HTML_Div, HTMLable};
 use gloo::console::log as console_log;
+use crate::ui::main::UiState;
 
 
 const ALPHABET_LEN:usize = 26;
@@ -186,29 +187,43 @@ impl StatefullView<StateStartArmyPlacement> for ViewStartArmyPlacement {
 
 
 #[derive(Clone, Default)]
-pub struct StateHeader {
+pub struct StateTurn {
     pub active: bool,
-    pub text: String,
+    pub active_player: u32,
+    pub can_reinforce:bool
 }
-impl UpdateableState for StateHeader{}
+impl UpdateableState for StateTurn {}
 
 
 
-pub struct ViewHeader{
-//    template:WrapHtml,
-    pub state:StateHeader,
-    text_label: WrapDiv,
+pub struct ViewTurn {
+    template:WrapHtml,
+    label_player:WrapDiv,
+    btn_reinforce:WrapBtn,
+    btn_next_turn:WrapBtn,
+    pub state: StateTurn,
     mounted:bool
 }
 
-impl StatefullView<StateHeader> for ViewHeader{
+impl StatefullView<StateTurn> for ViewTurn{
     fn create(doc: &Document) -> Self {
-        let mut ret = ViewHeader{
-            state: StateHeader{
+        let id_label = get_random_id();
+        let id_bnt_reinforce = get_random_id();
+        let id_btn_next_turn = get_random_id();
+        let template = WrapHtml::new(doc, "turn_start".to_string(), template_turn_menu(
+            &id_label, &id_bnt_reinforce, &id_btn_next_turn
+        ).as_str());
+        template.mount();
+        let mut ret = ViewTurn{
+            template,
+            label_player: WrapDiv::new_from_id(&id_label),
+            btn_reinforce: WrapBtn::new_from_id(&id_bnt_reinforce),
+            btn_next_turn: WrapBtn::new_from_id(&id_btn_next_turn),
+            state: StateTurn {
                 active: false,
-                text: "Player 1".to_string(),
+                active_player: 0,
+                can_reinforce: true,
             },
-            text_label: WrapDiv::new(doc, "header".to_string(), "".to_string()),
             mounted: false,
         };
 
@@ -221,21 +236,21 @@ impl StatefullView<StateHeader> for ViewHeader{
             panic!("component is already mounted")
         }
         self.mounted = true;
-        self.text_label.mount();
         self.update_self();
 
     }
 
-    fn update(&mut self, state: StateHeader) {
+    fn update(&mut self, state: StateTurn) {
         self.state = state;
     }
 
     fn update_self(&mut self) {
-        self.text_label.set_text(self.state.text.clone());
-        self.text_label.set_visibilty(self.state.active);
+        self.label_player.set_text(format!("Player {}", self.state.active_player));
+        self.btn_reinforce.set_visibilty(self.state.can_reinforce);
+        self.template.set_visibilty(self.state.active);
     }
 
-    fn get(&self) -> StateHeader {
+    fn get(&self) -> StateTurn {
         self.state.clone()
     }
 
@@ -273,8 +288,8 @@ pub struct StateCombat {
     pub attack_location:String,
     pub armies_attacking: u32,
     pub armies_defending:u32,
-    pub id_attacker:Option<u32>,
-    pub id_defender:Option<u32>,
+    pub id_attacker:u32,
+    pub id_defender:u32,
 }
 
 impl UpdateableState for StateCombat{}
@@ -288,7 +303,7 @@ pub struct CombatArmySelect{
 }
 
 pub struct ViewCombat{
-    state:StateCombat,
+    pub state:StateCombat,
     template:WrapHtml,
     title: WrapDiv,
     location_text: WrapHeading,
@@ -354,10 +369,9 @@ impl StatefullView<StateCombat> for ViewCombat{
             chk_set_visbility(&child.style(), visible);
         };
 
-        let handle_combat_view = |view:&mut CombatArmySelect, player:&Option<u32>, armies:u32,
+        let handle_combat_view = |view:&mut CombatArmySelect, player:&u32, armies:u32,
                                   is_attacker:bool|{
-            if player.is_some(){
-                view.player_text.set_text(format!("Player {}", player.as_ref().unwrap()));
+                view.player_text.set_text(format!("Player {}", player));
                 if armies > 2 && is_attacker{
                     log!(format!("attacker and > 2 is attack {} armies {}",is_attacker, armies));
                     set_visibilty_child(&view.select, 1, true );
@@ -373,9 +387,6 @@ impl StatefullView<StateCombat> for ViewCombat{
                     set_visibilty_child(&view.select, 2, false);
                 }
 
-            }else {
-                view.main.set_visibilty(false)
-            }
         };
         handle_combat_view(&mut self.menu_attack, &self.state.id_attacker,
                            self.state.armies_attacking, true);
@@ -478,7 +489,7 @@ pub struct ViewGameEnd{
 
 #[derive(Clone )]
 pub enum SelectedView {
-    Header,
+    Turn_Menu,
     StartPlace,
     Place,
     Combat,
@@ -487,7 +498,7 @@ pub enum SelectedView {
 
 pub struct UiStateManager {
     com_bus:Option<Rc<ComBus>>,
-    pub header:ViewHeader,
+    pub turn_menu: ViewTurn,
     pub start_army_placement: ViewStartArmyPlacement,
     pub army_placement:ViewArmyPlacement,
     pub selected: SelectedView,
@@ -501,10 +512,10 @@ impl UiStateManager {
         let doc = get_document();
         UiStateManager {
             com_bus:None,
-            header: ViewHeader::create(&doc),
+            turn_menu: ViewTurn::create(&doc),
             start_army_placement: ViewStartArmyPlacement::create(&doc),
             army_placement: ViewArmyPlacement::create(&doc),
-            selected: SelectedView::Header,
+            selected: SelectedView::Turn_Menu,
             combat: ViewCombat::create(&doc),
             dice_rolls: ViewDiceRoll::create(&doc),
             info_div: WrapDiv::new_from_id(&"info".to_string()),
@@ -516,7 +527,7 @@ impl UiStateManager {
     }
 
     pub fn mount(&mut self) {
-        self.header.mount();
+        self.turn_menu.mount();
         self.start_army_placement.mount();
         self.army_placement.mount();
         self.combat.mount();
@@ -524,28 +535,30 @@ impl UiStateManager {
     }
 
     pub fn update_all(&mut self){
-        self.header.update_self();
+        self.turn_menu.update_self();
         self.start_army_placement.update_self();
         self.army_placement.update_self();
         self.combat.update_self();
         self.dice_rolls.update_self();
     }
 
-    pub fn select_view(&mut self, view:Option<SelectedView>){
+    pub fn select_view(&mut self, view:UiState){
         self.hide_all();
-        if view.is_some(){
-            match view.unwrap() {
-                SelectedView::Header => { self.header.show()}
-                SelectedView::StartPlace => {self.start_army_placement.show()}
-                SelectedView::Place => {self.army_placement.show()}
-                SelectedView::Combat => {self.combat.show()}
-                SelectedView::DiceRolling => {self.dice_rolls.show()}
+            match view {
+                UiState::ARMY_PLACEMENT_START => {self.start_army_placement.show()}
+                UiState::ARMY_PLACEMENT => {self.army_placement.show()}
+                UiState::TURN => {self.turn_menu.show()}
+                UiState::COMBAT => {self.combat.show()}
+                UiState::DICE_ROLL => {self.dice_rolls.show()}
+                UiState::GAME_END => {todo!()}
+                UiState::CARD_SELECT => {todo!()}
+                _ => {}
             }
-        }
+        self.update_all()
     }
 
-    fn hide_all(&mut self){
-        self.header.hide();
+    pub fn hide_all(&mut self){
+        self.turn_menu.hide();
         self.start_army_placement.hide();
         self.army_placement.hide();
         self.combat.hide();

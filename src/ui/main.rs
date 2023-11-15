@@ -12,9 +12,9 @@ pub enum UiState {
     SETUP,
     ARMY_PLACEMENT_START,
     ARMY_PLACEMENT,
-    TURN_START,
     TURN,
     COMBAT,
+    DICE_ROLL,
     GAME_END,
     CARD_SELECT,
 

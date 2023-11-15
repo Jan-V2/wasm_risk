@@ -17,7 +17,6 @@ use gloo::console::log as console_log;
 use sycamore::prelude::create_signal;
 use crate::ui::main::UiMainProps;
 use crate::ui::ui_state_manager::{ UiStateManager};
-use crate::utils::funcs::rand_int;
 
 pub struct ComBus{
     game_ref:Option<Rc<RefCell<Game>>>,

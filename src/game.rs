@@ -1,3 +1,4 @@
+use std::cell::RefCell;
 use std::rc::Rc;
 use js_sys::Math::sqrt;
 use crate::element_getters::set_info_field;
@@ -8,7 +9,7 @@ use gloo::console::log as console_log;
 use crate::ComBus;
 use crate::ui::structs::{UiInfo};
 use crate::ui::main::UiState;
-use crate::ui::ui_state_manager::{UpdateableState};
+use crate::ui::ui_state_manager::{StateCombat, UiStateManager, UpdateableState, StatefullView};
 
 
 pub struct ProvLookupTable {
@@ -49,6 +50,12 @@ impl ProvLookupTable {
     }
 }
 
+#[derive(Default)]
+pub struct StateTurn{
+    attack_target:Option<u32>,
+}
+
+
 pub struct Game {
     pub model: Model,
     prov_lookup: ProvLookupTable,
@@ -56,6 +63,7 @@ pub struct Game {
     ui_info: Option<UiInfo>,
     com_bus:Option<Rc<ComBus>>,
     logging:bool,
+    state_turn:StateTurn,
 }
 
 
@@ -68,6 +76,7 @@ impl Game {
             ui_info: None,
             com_bus:None,
             logging: use_logging,
+            state_turn: Default::default(),
         };
     }
 
@@ -88,7 +97,6 @@ impl Game {
     }
 
     fn assign_provs_random(&mut self) {
-        // todo make this not a random number per player
         gloo::console::log!(format!("players len = {}", self.model.players.len()));
         let player_count = self.model.players.len();
         let prov_total = self.model.provinces.len() as u32;
@@ -231,13 +239,13 @@ impl Game {
             let prov_id = prov_id_opt.unwrap();
             match self.ui_info_ref().ui_state.get() {
                 UiState::SETUP => {}
-                UiState::ARMY_PLACEMENT_START => self.handle_army_placement(prov_id, true),
-                UiState::ARMY_PLACEMENT => self.handle_army_placement(prov_id, false),
-                UiState::TURN_START => {}
-                UiState::TURN => {}
+                UiState::ARMY_PLACEMENT_START => self.handle_canvas_army_placement(prov_id, true),
+                UiState::ARMY_PLACEMENT => self.handle_canvas_army_placement(prov_id, false),
+                UiState::TURN => {self.handle_canvas_turn(prov_id)}
                 UiState::COMBAT => {}
                 UiState::GAME_END => {}
                 UiState::CARD_SELECT => {}
+                UiState::DICE_ROLL => {}
             }
         }
     }
@@ -258,11 +266,59 @@ impl Game {
         self.ui_info.unwrap().active_player.get()
     }
 
-    fn handle_turn(&mut self, prov_id:u32){
+    fn get_ui_rc(&self)->Rc<RefCell<UiStateManager>>{
+        self.com_bus.as_ref().unwrap().get_ui().clone()
+    }
+
+    fn set_new_ui_state(&self){
+        let state = self.ui_info.as_ref().unwrap().ui_state.get();
+        self.get_ui_rc().borrow_mut().select_view(state )
+    }
+
+    fn handle_canvas_turn(&mut self, prov_id:u32){
+        if self.state_turn.attack_target.is_some(){
+            if self.is_owned_by_active(&prov_id){
+                self.info_print("You can't attack your own province".to_string())
+            }else {
+                let nav_res = self.model.nav_tree.navigate_adjacent(
+                    prov_id, self.state_turn.attack_target.as_ref().unwrap().clone()
+                );
+                if nav_res.is_some(){
+                    if nav_res.unwrap(){
+                        self.get_ui_rc().borrow_mut().hide_all();
+                        let prov_attack = self.model.get_prov_from_id(
+                            &self.state_turn.attack_target.as_ref().unwrap()).unwrap();
+                        let prov_defend = self.model.get_prov_from_id(&prov_id).unwrap();
+                        self.get_ui_rc().borrow_mut().combat.update( StateCombat{
+                            active: true,
+                            attack_location: prov_defend.name.clone(),
+                            armies_attacking: prov_attack.army_count - 1,
+                            armies_defending: prov_defend.army_count,
+                            id_attacker: prov_attack.owner_id,
+                            id_defender: prov_defend.owner_id,
+                        });
+                        self.ui_info.as_ref().unwrap().ui_state.set(UiState::COMBAT);
+                    }else {
+                        self.info_print(format!("Can't attack {} no connection",
+                            self.model.get_prov_from_id(&prov_id).unwrap().name.clone()))
+                    }
+                }else {
+                    self.info_print("Invalid navigation".to_string())
+                }
+            }
+        }else {
+            if self.is_owned_by_active(&prov_id){
+                self.state_turn.attack_target = Some(prov_id);
+                let prov_name = self.model.get_prov_from_id(&prov_id).unwrap().name.clone();
+                self.info_print(format!("Attacking from {}", prov_name));
+            }else {
+                self.info_print(format!("Please select a province you own."));
+            }
+        }
         self.log("turn".to_string())
     }
 
-    fn handle_army_placement(&mut self, prov_id: u32, placement_start: bool) {
+    fn handle_canvas_army_placement(&mut self, prov_id: u32, placement_start: bool) {
         if !self.is_owned_by_active(&prov_id){
             self.log("placement: prov not owned by active player".to_string());
             return;
@@ -280,21 +336,23 @@ impl Game {
         if armies_available > 0 {
             self.change_armies_in_prov(1, &prov_id);
             if placement_start {
-
-                self.com_bus.as_ref().unwrap().get_ui().borrow_mut().
+                self.get_ui_rc().borrow_mut().
                     start_army_placement.state.update(|state |{
                     state.armies[state.current_player as usize] -=1;
                     if state.armies[state.current_player as usize] == 0{
                         if state.current_player + 1 < state.num_players{
                             state.current_player += 1;
-                            self.ui_info.unwrap().active_player.set(state.current_player);
+                            self.ui_info.as_ref().unwrap().active_player.set(state.current_player);
                         }else {
                             state.active = false;
-                            self.ui_info.unwrap().active_player.set(0);
-                            self.ui_info.unwrap().ui_state.set(UiState::TURN);
+                            self.ui_info.as_ref().unwrap().active_player.set(0);//todo pass this to ui
+                            self.ui_info.as_ref().unwrap().ui_state.set(UiState::TURN);
                         }
                     }
                 });
+                if self.get_ui_state() == UiState::TURN{
+                    self.set_new_ui_state()
+                }
             } else {
                 self.com_bus.as_ref().unwrap().get_ui().borrow_mut().
                     army_placement.state.update(|state |{
@@ -302,7 +360,6 @@ impl Game {
                     if state.armies == 0{
                         state.active = false;
                         //todo next state
-
                     }
                 });
             }
@@ -315,18 +372,6 @@ impl Game {
         self.draw_board();
     }
 
-    fn next_state(&mut self){
-        match self.ui_info_ref().ui_state.get() {
-            UiState::SETUP => {}
-            UiState::ARMY_PLACEMENT_START => {}
-            UiState::ARMY_PLACEMENT => {}
-            UiState::TURN_START => {}
-            UiState::TURN => {}
-            UiState::COMBAT => {}
-            UiState::GAME_END => {}
-            UiState::CARD_SELECT => {}
-        }
-    }
 
     pub fn nav_tree_end_add(&mut self) {
         self.model.nav_tree.end_add();
@@ -360,6 +405,10 @@ impl Game {
         if self.logging{
             console_log!(msg)
         }
+    }
+
+    fn info_print(&self, msg:String){
+        console_log!(msg)
     }
 
     pub fn set_ui_info(&mut self, info: UiInfo) {
