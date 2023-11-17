@@ -16,37 +16,6 @@ use crate::element_getters::{ get_element_by_id};
 use gloo::console::log as console_log;
 use sycamore::prelude::create_signal;
 use crate::ui::main::UiMainProps;
-use crate::ui::ui_state_manager::{ UiStateManager};
-
-pub struct ComBus{
-    game_ref:Option<Rc<RefCell<Game>>>,
-    ui_ref:Option<Rc<RefCell<UiStateManager>>>
-}
-
-impl ComBus {
-    pub fn new()->ComBus{
-        ComBus{
-            game_ref: None,
-            ui_ref: None,
-        }
-    }
-
-    pub fn add_game(&mut self, game:Rc<RefCell<Game>>){
-        self.game_ref = Some(game)
-    }
-
-    pub fn add_ui_manager(&mut self, ui_manager:Rc<RefCell<UiStateManager>>){
-        self.ui_ref = Some(ui_manager)
-    }
-
-    pub fn get_ui(&self)->Rc<RefCell<UiStateManager>>{
-        self.ui_ref.as_ref().unwrap().clone()
-    }
-
-    pub fn get_game(&self)->Rc<RefCell<Game>>{
-        self.game_ref.as_ref().unwrap().clone()
-    }
-}
 
 #[wasm_bindgen(start)]
 fn setup() {
@@ -56,20 +25,8 @@ fn setup() {
 
     let game = Game::new(get_map_lookup_data(50), true);
     let refc_game = Rc::from(RefCell::from(game));
-
-    let mut ui_state = UiStateManager::build();
-    ui_state.mount();
-    let refc_ui = Rc::from(RefCell::from(ui_state));
-
-
-    let mut com_bus = ComBus::new();
-    com_bus.add_game(refc_game.clone());
-    com_bus.add_ui_manager(refc_ui.clone());
-    let combus_rc = Rc::from(com_bus);
-
-    refc_game.borrow_mut().add_combus(combus_rc.clone());
-    refc_ui.borrow_mut().add_combus(combus_rc);
-
+    let ref2 = refc_game.clone();
+    refc_game.borrow_mut().set_self_ref(ref2);
 
     canvas::ui_init_canvas(refc_game.clone());
 

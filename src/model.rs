@@ -57,6 +57,14 @@ impl Model{
         }
         None
     }
+
+    pub fn get_name_from_prov_id(&self, prov_id:&u32)  -> Option<String>{
+        let prov = self.get_prov_from_id(&prov_id);
+        if prov.is_some(){
+            return Some(prov.unwrap().name.clone());
+        }
+        None
+    }
 }
 
 #[derive(Clone, Debug)]

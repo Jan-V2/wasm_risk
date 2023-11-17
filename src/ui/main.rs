@@ -13,6 +13,7 @@ pub enum UiState {
     ARMY_PLACEMENT_START,
     ARMY_PLACEMENT,
     TURN,
+    MOVE,
     COMBAT,
     DICE_ROLL,
     GAME_END,

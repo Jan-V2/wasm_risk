@@ -4,7 +4,6 @@ use gloo::console::log;
 use wasm_bindgen::JsCast;
 use web_sys::{Document, HtmlOptionElement};
 use crate::canvas::{DiceFaceTex, get_dice_tex};
-use crate::ComBus;
 use crate::element_getters::get_document;
 use crate::model::CombatResult;
 use crate::ui::wrap_elem::{WrapBtn, WrapHtml, WrapDiv, WrapSelect, WrapHeading, WrapDiceCanvas, chk_set_visbility};
@@ -35,23 +34,15 @@ pub trait StatefullView<T> {
     fn show(&mut self);
 }
 
-pub trait UpdateableState{
-    fn update<F>(&mut self, f:F )where F: Fn(&mut Self){
-        f(self)
-    }
-}
-
 #[derive(Clone, Default)]
 pub struct StateArmyPlacement {
-    pub active: bool,
     pub armies: u32,
     pub active_player: u32,
 }
-impl UpdateableState for StateArmyPlacement{}
 
 
 pub struct ViewArmyPlacement{
-    pub state:StateArmyPlacement,
+    state:StateArmyPlacement,
     template:WrapHtml,
     count_label: WrapDiv,
     mounted:bool,
@@ -91,7 +82,6 @@ impl StatefullView<StateArmyPlacement> for ViewArmyPlacement{
     fn update_self(&mut self) {
         self.count_label.set_text(format!("You still need to Place {} armies",
                                           self.state.armies));
-        self.template.set_visibilty(self.state.active);
     }
 
     fn get(&self) -> StateArmyPlacement {
@@ -99,30 +89,24 @@ impl StatefullView<StateArmyPlacement> for ViewArmyPlacement{
     }
 
     fn hide(&mut self) {
-        self.state.active =false;
-        self.update_self();
+        self.template.set_visibilty(false);
     }
 
     fn show(&mut self) {
-        self.state.active =false;
-        self.update_self();
+        self.template.set_visibilty(true);
     }
 }
 
 
 #[derive(Clone, Default, Debug)]
 pub struct StateStartArmyPlacement {
-    pub active: bool,
     pub current_player: u32,
     pub num_players:u32,
     pub armies: [u32; 6],
 }
 
-impl UpdateableState for StateStartArmyPlacement{}
-
-
 pub struct ViewStartArmyPlacement {
-    pub state: StateStartArmyPlacement,
+    state: StateStartArmyPlacement,
     template: WrapHtml,
     player_label: WrapDiv,
     army_count_label: WrapDiv,
@@ -166,42 +150,34 @@ impl StatefullView<StateStartArmyPlacement> for ViewStartArmyPlacement {
         self.player_label.set_text(format!("Player {}", self.state.current_player + 1));
         self.army_count_label.set_text(format!("{} armies still available.",
                                                self.state.armies[self.state.current_player as usize]));
-        self.template.set_visibilty(self.state.active)
     }
 
     fn get(&self) -> StateStartArmyPlacement {
         self.state.clone()
     }
 
-
     fn hide(&mut self) {
-        self.state.active =false;
-        self.update_self();
+        self.template.set_visibilty(false);
     }
 
     fn show(&mut self) {
-        self.state.active =false;
-        self.update_self();
+        self.template.set_visibilty(true);
     }
 }
 
 
 #[derive(Clone, Default)]
 pub struct StateTurn {
-    pub active: bool,
     pub active_player: u32,
     pub can_reinforce:bool
 }
-impl UpdateableState for StateTurn {}
-
-
 
 pub struct ViewTurn {
     template:WrapHtml,
     label_player:WrapDiv,
     btn_reinforce:WrapBtn,
     btn_next_turn:WrapBtn,
-    pub state: StateTurn,
+    state: StateTurn,
     mounted:bool
 }
 
@@ -220,7 +196,6 @@ impl StatefullView<StateTurn> for ViewTurn{
             btn_reinforce: WrapBtn::new_from_id(&id_bnt_reinforce),
             btn_next_turn: WrapBtn::new_from_id(&id_btn_next_turn),
             state: StateTurn {
-                active: false,
                 active_player: 0,
                 can_reinforce: true,
             },
@@ -245,35 +220,28 @@ impl StatefullView<StateTurn> for ViewTurn{
     }
 
     fn update_self(&mut self) {
-        self.label_player.set_text(format!("Player {}", self.state.active_player));
+        self.label_player.set_text(format!("Player {}", self.state.active_player + 1));
         self.btn_reinforce.set_visibilty(self.state.can_reinforce);
-        self.template.set_visibilty(self.state.active);
     }
 
     fn get(&self) -> StateTurn {
         self.state.clone()
     }
 
-
     fn hide(&mut self) {
-        self.state.active =false;
-        self.update_self();
+        self.template.set_visibilty(false);
     }
 
     fn show(&mut self) {
-        self.state.active =false;
-        self.update_self();
+        self.template.set_visibilty(true);
     }
 }
 
 
 #[derive(Clone, Default)]
 pub struct StateTurnStart {
-    pub active: bool,
     pub armies: u32,
 }
-impl UpdateableState for StateTurnStart{}
-
 
 pub struct ViewTurnStart{
     template:WrapHtml,
@@ -284,7 +252,6 @@ pub struct ViewTurnStart{
 
 #[derive(Clone, Default)]
 pub struct StateCombat {
-    pub active: bool,
     pub attack_location:String,
     pub armies_attacking: u32,
     pub armies_defending:u32,
@@ -292,7 +259,6 @@ pub struct StateCombat {
     pub id_defender:u32,
 }
 
-impl UpdateableState for StateCombat{}
 
 
 pub struct CombatArmySelect{
@@ -303,7 +269,7 @@ pub struct CombatArmySelect{
 }
 
 pub struct ViewCombat{
-    pub state:StateCombat,
+    state:StateCombat,
     template:WrapHtml,
     title: WrapDiv,
     location_text: WrapHeading,
@@ -400,13 +366,12 @@ impl StatefullView<StateCombat> for ViewCombat{
 
 
     fn hide(&mut self) {
-        self.state.active =false;
-        self.update_self();
+        self.template.set_visibilty(false);
     }
 
     fn show(&mut self) {
-        self.state.active =false;
-        self.update_self();
+        console_log!("set combat to visible");
+        self.template.set_visibilty(true);
     }
 }
 
@@ -464,13 +429,11 @@ impl StatefullView<CombatResult> for ViewDiceRoll{
     }
 
     fn hide(&mut self) {
-        self.state.combat_finished=true;
-        self.update_self();
+        self.template.set_visibilty(false);
     }
 
     fn show(&mut self) {
-        self.state.combat_finished =false;
-        self.update_self();
+        self.template.set_visibilty(true);
     }
 }
 
@@ -489,7 +452,7 @@ pub struct ViewGameEnd{
 
 #[derive(Clone )]
 pub enum SelectedView {
-    Turn_Menu,
+    TurnMenu,
     StartPlace,
     Place,
     Combat,
@@ -497,7 +460,6 @@ pub enum SelectedView {
 }
 
 pub struct UiStateManager {
-    com_bus:Option<Rc<ComBus>>,
     pub turn_menu: ViewTurn,
     pub start_army_placement: ViewStartArmyPlacement,
     pub army_placement:ViewArmyPlacement,
@@ -511,19 +473,14 @@ impl UiStateManager {
     pub fn build() -> UiStateManager {
         let doc = get_document();
         UiStateManager {
-            com_bus:None,
             turn_menu: ViewTurn::create(&doc),
             start_army_placement: ViewStartArmyPlacement::create(&doc),
             army_placement: ViewArmyPlacement::create(&doc),
-            selected: SelectedView::Turn_Menu,
+            selected: SelectedView::TurnMenu,
             combat: ViewCombat::create(&doc),
             dice_rolls: ViewDiceRoll::create(&doc),
             info_div: WrapDiv::new_from_id(&"info".to_string()),
         }
-    }
-
-    pub fn add_combus(&mut self, com_bus:Rc<ComBus>){
-        self.com_bus = Some(com_bus)
     }
 
     pub fn mount(&mut self) {
@@ -532,6 +489,7 @@ impl UiStateManager {
         self.army_placement.mount();
         self.combat.mount();
         self.dice_rolls.mount();
+        self.hide_all();
     }
 
     pub fn update_all(&mut self){
@@ -542,7 +500,7 @@ impl UiStateManager {
         self.dice_rolls.update_self();
     }
 
-    pub fn select_view(&mut self, view:UiState){
+    pub fn select_view(&mut self, view:&UiState){
         self.hide_all();
             match view {
                 UiState::ARMY_PLACEMENT_START => {self.start_army_placement.show()}

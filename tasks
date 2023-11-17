@@ -1,0 +1,32 @@
+todos:
+attach handlers to end turn button which gives turn to next player
+make starting combat open up combat view
+
+reinforce button:
+make reinforce button disapear after action
+add rules that calc reinforcing army
+redirect to placement view
+redirect from placemen to next player
+
+movement phase:
+redirect next phase to movement
+implement movement
+
+attach ui to handlers:
+ui reinforce handler
+ui combat roll handler
+ui dice next
+
+
+handlers:
+canvas move handler
+ui reinforce handler
+ui combat roll handler
+ui dice next
+
+misc:
+
+dones:
+stop printing prov clicked
+print all to info dif
+add more structure to Game
