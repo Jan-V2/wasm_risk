@@ -30,6 +30,7 @@ impl HTML_Div for WrapHeading {
         self.elem.set_inner_text(self.text.as_str())
     }
 
+
     fn get_text(&self) -> String {
         self.text.clone()
     }
@@ -96,14 +97,17 @@ pub struct WrapBtn{
 }
 
 impl WrapBtn {
-    fn new(document:&Document, id:String, text:String, click_handler:Box<dyn FnMut(MouseEvent)>) -> Self {
+    fn new(document:&Document, id:String, text:String) -> Self {
         let ret = WrapBtn{
             elem: create_new_elem(document, "button"),
             id,
             text,
         };
-        attach_handler_to_btn(&ret.elem,"click", click_handler);
         ret
+    }
+
+    pub fn set_click_handler(&mut self, clojure: Box<dyn FnMut(MouseEvent)>){
+        attach_handler_to_btn(&self.elem, "click", clojure)
     }
 }
 

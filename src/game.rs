@@ -62,7 +62,6 @@ pub struct Game {
     logging: bool,
     state_turn: StateTurn,
     ui_man: UiStateManager,
-    ref_self: Option<Rc<RefCell<Game>>>,
 }
 
 impl Game {
@@ -77,7 +76,6 @@ impl Game {
             logging: use_logging,
             state_turn: Default::default(),
             ui_man: ui_state_man,
-            ref_self: None,
         };
     }
 
@@ -94,7 +92,7 @@ impl Game {
         if prov_id_opt.is_some() {
             let prov_id = prov_id_opt.unwrap();
             match self.ui_info_ref().ui_state.get() {
-                UiState::SETUP => {self.handle_canvas_noop(UiState::SETUP}
+                UiState::SETUP => {self.handle_canvas_noop(UiState::SETUP)}
                 UiState::ARMY_PLACEMENT_START => self.handle_canvas_army_placement(prov_id, true),
                 UiState::ARMY_PLACEMENT => self.handle_canvas_army_placement(prov_id, false),
                 UiState::TURN => self.handle_canvas_turn(prov_id),
@@ -129,6 +127,8 @@ impl Game {
                             armies_defending: prov_defend.army_count,
                             id_attacker: prov_attack.owner_id,
                             id_defender: prov_defend.owner_id,
+                            attack_visible: true,
+                            defend_visible: true,
                         });
                         self.set_ui_state(UiState::COMBAT);
                         self.info_print(format!(
@@ -228,8 +228,8 @@ impl Game {
         todo!()
     }
 
-    pub fn handle_ui_combat_roll(&mut self){
-        todo!()
+    pub fn handle_ui_combat_roll(&mut self, is_attack:bool){
+        self.log(is_attack.to_string())
     }
 
     pub fn handle_ui_dice_next(&mut self){
@@ -428,6 +428,6 @@ impl Game {
     }
 
     pub fn set_self_ref(&mut self, self_ref: Rc<RefCell<Game>>) {
-        self.ref_self = Some(self_ref);
+        self.ui_man.set_handlers(&self_ref)
     }
 }

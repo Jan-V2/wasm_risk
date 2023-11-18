@@ -1,19 +1,20 @@
 use std::rc::Rc;
-use std::cell::RefCell;
+use std::cell::{RefCell, RefMut};
 use gloo::console::log;
 use wasm_bindgen::JsCast;
 use web_sys::{Document, HtmlOptionElement};
 use crate::canvas::{DiceFaceTex, get_dice_tex};
-use crate::element_getters::get_document;
+use crate::element_getters::{get_document};
 use crate::model::CombatResult;
 use crate::ui::wrap_elem::{WrapBtn, WrapHtml, WrapDiv, WrapSelect, WrapHeading, WrapDiceCanvas, chk_set_visbility};
 use crate::ui::templates::*;
 use crate::ui::traits::{HTML_Div, HTMLable};
 use gloo::console::log as console_log;
+use crate::game::Game;
 use crate::ui::main::UiState;
 
 
-const ALPHABET_LEN:usize = 26;
+const ALPHABET_LEN: usize = 26;
 const ASCII_LOWER: [char; ALPHABET_LEN] = [
     'a', 'b', 'c', 'd', 'e',
     'f', 'g', 'h', 'i', 'j',
@@ -25,13 +26,14 @@ const ASCII_LOWER: [char; ALPHABET_LEN] = [
 
 
 pub trait StatefullView<T> {
-    fn create(doc:&Document)->Self;
+    fn create(doc: &Document) -> Self;
     fn mount(&mut self);
     fn update(&mut self, state: T);
     fn update_self(&mut self);
     fn get(&self) -> T;
     fn hide(&mut self);
     fn show(&mut self);
+    fn set_handlers(&mut self, game_ref: &Rc<RefCell<Game>>);
 }
 
 #[derive(Clone, Default)]
@@ -41,21 +43,21 @@ pub struct StateArmyPlacement {
 }
 
 
-pub struct ViewArmyPlacement{
-    state:StateArmyPlacement,
-    template:WrapHtml,
+pub struct ViewArmyPlacement {
+    state: StateArmyPlacement,
+    template: WrapHtml,
     count_label: WrapDiv,
-    mounted:bool,
+    mounted: bool,
 }
 
 
-impl StatefullView<StateArmyPlacement> for ViewArmyPlacement{
+impl StatefullView<StateArmyPlacement> for ViewArmyPlacement {
     fn create(doc: &Document) -> Self {
-        let count_id =get_random_id();
-        let mut ret = ViewArmyPlacement{
+        let count_id = get_random_id();
+        let mut ret = ViewArmyPlacement {
             state: Default::default(),
             template: WrapHtml::new(doc, "army_placement".to_string(),
-                                    template_army_placement(&count_id).as_str() ),
+                                    template_army_placement(&count_id).as_str()),
             count_label: WrapDiv::new(doc,
                                       count_id, "lkmlk".to_string()),
             mounted: false,
@@ -65,7 +67,7 @@ impl StatefullView<StateArmyPlacement> for ViewArmyPlacement{
     }
 
     fn mount(&mut self) {
-        if self.mounted{
+        if self.mounted {
             panic!("component is already mounted")
         }
         self.mounted = true;
@@ -95,13 +97,15 @@ impl StatefullView<StateArmyPlacement> for ViewArmyPlacement{
     fn show(&mut self) {
         self.template.set_visibilty(true);
     }
+
+    fn set_handlers(&mut self, _: &Rc<RefCell<Game>>) {}
 }
 
 
 #[derive(Clone, Default, Debug)]
 pub struct StateStartArmyPlacement {
     pub current_player: u32,
-    pub num_players:u32,
+    pub num_players: u32,
     pub armies: [u32; 6],
 }
 
@@ -110,12 +114,12 @@ pub struct ViewStartArmyPlacement {
     template: WrapHtml,
     player_label: WrapDiv,
     army_count_label: WrapDiv,
-    mounted:bool,
+    mounted: bool,
 }
 
 
 impl StatefullView<StateStartArmyPlacement> for ViewStartArmyPlacement {
-    fn create(doc:&Document)->Self{
+    fn create(doc: &Document) -> Self {
         let id_player = get_random_id();
         let id_count = get_random_id();
         ViewStartArmyPlacement {
@@ -131,7 +135,7 @@ impl StatefullView<StateStartArmyPlacement> for ViewStartArmyPlacement {
     }
 
     fn mount(&mut self) {
-        if self.mounted{
+        if self.mounted {
             panic!("component is already mounted");
         }
         self.mounted = true;
@@ -163,34 +167,36 @@ impl StatefullView<StateStartArmyPlacement> for ViewStartArmyPlacement {
     fn show(&mut self) {
         self.template.set_visibilty(true);
     }
+
+    fn set_handlers(&mut self, _: &Rc<RefCell<Game>>) {}
 }
 
 
 #[derive(Clone, Default)]
 pub struct StateTurn {
     pub active_player: u32,
-    pub can_reinforce:bool
+    pub can_reinforce: bool,
 }
 
 pub struct ViewTurn {
-    template:WrapHtml,
-    label_player:WrapDiv,
-    btn_reinforce:WrapBtn,
-    btn_next_turn:WrapBtn,
+    template: WrapHtml,
+    label_player: WrapDiv,
+    btn_reinforce: WrapBtn,
+    btn_next_turn: WrapBtn,
     state: StateTurn,
-    mounted:bool
+    mounted: bool,
 }
 
-impl StatefullView<StateTurn> for ViewTurn{
+impl StatefullView<StateTurn> for ViewTurn {
     fn create(doc: &Document) -> Self {
         let id_label = get_random_id();
         let id_bnt_reinforce = get_random_id();
         let id_btn_next_turn = get_random_id();
         let template = WrapHtml::new(doc, "turn_start".to_string(), template_turn_menu(
-            &id_label, &id_bnt_reinforce, &id_btn_next_turn
+            &id_label, &id_bnt_reinforce, &id_btn_next_turn,
         ).as_str());
         template.mount();
-        let mut ret = ViewTurn{
+        let mut ret = ViewTurn {
             template,
             label_player: WrapDiv::new_from_id(&id_label),
             btn_reinforce: WrapBtn::new_from_id(&id_bnt_reinforce),
@@ -207,12 +213,11 @@ impl StatefullView<StateTurn> for ViewTurn{
     }
 
     fn mount(&mut self) {
-        if self.mounted{
+        if self.mounted {
             panic!("component is already mounted")
         }
         self.mounted = true;
         self.update_self();
-
     }
 
     fn update(&mut self, state: StateTurn) {
@@ -235,6 +240,20 @@ impl StatefullView<StateTurn> for ViewTurn{
     fn show(&mut self) {
         self.template.set_visibilty(true);
     }
+
+    fn set_handlers(&mut self, game_ref: &Rc<RefCell<Game>>) {
+        let ref_reinforce = game_ref.clone();
+        self.btn_reinforce.set_click_handler(Box::from(move |_| {
+            borrow_game_safe(&ref_reinforce, "reinforce btn".to_string(),
+                             |mut g| {g.handle_ui_reinforce()});
+        }));
+
+        let ref_next_turn = game_ref.clone();
+        self.btn_next_turn.set_click_handler(Box::from(move |_| {
+            borrow_game_safe(&ref_next_turn, "attack btn".to_string(),
+                             |mut g| {g.handle_ui_end_turn()});
+        }));
+    }
 }
 
 
@@ -243,42 +262,55 @@ pub struct StateTurnStart {
     pub armies: u32,
 }
 
-pub struct ViewTurnStart{
-    template:WrapHtml,
-    state:StateTurnStart,
+pub struct ViewTurnStart {
+    template: WrapHtml,
+    state: StateTurnStart,
     text_label: WrapDiv,
-    reinforce_btn:WrapBtn,
+    reinforce_btn: WrapBtn,
 }
 
 #[derive(Clone, Default)]
 pub struct StateCombat {
-    pub attack_location:String,
+    pub attack_location: String,
     pub armies_attacking: u32,
-    pub armies_defending:u32,
-    pub id_attacker:u32,
-    pub id_defender:u32,
+    pub armies_defending: u32,
+    pub id_attacker: u32,
+    pub id_defender: u32,
+    pub attack_visible:bool,
+    pub defend_visible:bool,
 }
 
 
-
-pub struct CombatArmySelect{
-    main:WrapDiv,
-    select:WrapSelect,
-    player_text:WrapDiv,
-    btn_next:WrapBtn,
+pub struct CombatArmySelect {
+    main: WrapDiv,
+    select: WrapSelect,
+    player_text: WrapDiv,
+    btn_next: WrapBtn,
 }
 
-pub struct ViewCombat{
-    state:StateCombat,
-    template:WrapHtml,
+pub struct ViewCombat {
+    state: StateCombat,
+    template: WrapHtml,
     title: WrapDiv,
     location_text: WrapHeading,
     balance_text: WrapDiv,
-    menu_defend:CombatArmySelect,
-    menu_attack:CombatArmySelect,
+    menu_defend: CombatArmySelect,
+    menu_attack: CombatArmySelect,
 }
 
-impl StatefullView<StateCombat> for ViewCombat{
+impl ViewCombat {
+    fn show_attack(&mut self, is_visible: bool) {
+        self.state.attack_visible = is_visible;
+        self.update_self();
+    }
+
+    fn show_defend(&mut self, is_visible: bool) {
+        self.state.defend_visible = is_visible;
+        self.update_self();
+    }
+}
+
+impl StatefullView<StateCombat> for ViewCombat {
     fn create(doc: &Document) -> Self {
         let id_title = get_random_id();
         let id_location = get_random_id();
@@ -290,10 +322,10 @@ impl StatefullView<StateCombat> for ViewCombat{
 
         let template = WrapHtml::new(doc, "combat".to_string(), template_combat_menu(
             &id_title, &id_location, &id_balance, &id_select, &id_player_text,
-            &id_btn, &id_main
+            &id_btn, &id_main,
         ).as_str());
         template.mount();
-        ViewCombat{
+        ViewCombat {
             state: Default::default(),
             title: WrapDiv::new_from_id(&id_title),
             location_text: WrapHeading::new_from_id(&id_location),
@@ -329,35 +361,37 @@ impl StatefullView<StateCombat> for ViewCombat{
         self.balance_text.set_text(format!("Defenders {}:{} Attackers",
                                            self.state.armies_defending, self.state.armies_attacking));
 
-        let set_visibilty_child = |elem :&WrapSelect, idx:u32, visible:bool|{
+        let set_visibilty_child = |elem: &WrapSelect, idx: u32, visible: bool| {
             let child = elem.elem.children()
                 .get_with_index(idx).unwrap().dyn_into::<HtmlOptionElement>().unwrap();
             chk_set_visbility(&child.style(), visible);
         };
 
-        let handle_combat_view = |view:&mut CombatArmySelect, player:&u32, armies:u32,
-                                  is_attacker:bool|{
-                view.player_text.set_text(format!("Player {}", player));
-                if armies > 2 && is_attacker{
-                    log!(format!("attacker and > 2 is attack {} armies {}",is_attacker, armies));
-                    set_visibilty_child(&view.select, 1, true );
-                    set_visibilty_child(&view.select, 2, true );
-                    return;
-                }else if  armies > 1 {
-                    log!(format!("armies > 1 is attack {} armies {}",is_attacker, armies));
-                    set_visibilty_child(&view.select, 1, true );
-                    set_visibilty_child(&view.select, 2, false );
-                } else {
-                    log!(format!("1 army is attack {} armies {}",is_attacker, armies));
-                    set_visibilty_child(&view.select, 1, false );
-                    set_visibilty_child(&view.select, 2, false);
-                }
-
+        let handle_combat_view = |view: &mut CombatArmySelect, player: &u32, armies: u32,
+                                  is_attacker: bool| {
+            view.player_text.set_text(format!("Player {}", player));
+            if armies > 2 && is_attacker {
+                log!(format!("attacker and > 2 is attack {} armies {}",is_attacker, armies));
+                set_visibilty_child(&view.select, 1, true);
+                set_visibilty_child(&view.select, 2, true);
+                return;
+            } else if armies > 1 {
+                log!(format!("armies > 1 is attack {} armies {}",is_attacker, armies));
+                set_visibilty_child(&view.select, 1, true);
+                set_visibilty_child(&view.select, 2, false);
+            } else {
+                log!(format!("1 army is attack {} armies {}",is_attacker, armies));
+                set_visibilty_child(&view.select, 1, false);
+                set_visibilty_child(&view.select, 2, false);
+            }
         };
         handle_combat_view(&mut self.menu_attack, &self.state.id_attacker,
                            self.state.armies_attacking, true);
         handle_combat_view(&mut self.menu_defend, &self.state.id_defender,
                            self.state.armies_defending, false);
+
+        self.menu_attack.main.set_visibilty(self.state.attack_visible);
+        self.menu_defend.main.set_visibilty(self.state.defend_visible);
     }
 
     fn get(&self) -> StateCombat {
@@ -373,25 +407,40 @@ impl StatefullView<StateCombat> for ViewCombat{
         console_log!("set combat to visible");
         self.template.set_visibilty(true);
     }
+
+    fn set_handlers(&mut self, game_ref: &Rc<RefCell<Game>>) {
+
+        let ref_attack = game_ref.clone();
+        self.menu_attack.btn_next.set_click_handler(Box::from(move |_| {
+            borrow_game_safe(&ref_attack,"attack btn".to_string(),
+                             |mut g| g.handle_ui_combat_roll(true))
+        }));
+
+        let ref_defend = game_ref.clone();
+        self.menu_defend.btn_next.set_click_handler(Box::from(move |_| {
+            borrow_game_safe(&ref_defend,"attack btn".to_string(),
+                             |mut g| g.handle_ui_combat_roll(false))
+        }));
+    }
 }
 
 pub struct ViewDiceRoll {
-    state:CombatResult,
-    template:WrapHtml,
-    next_btn:WrapBtn,
-    canvas_top:WrapDiceCanvas,
-    canvas_bot:WrapDiceCanvas,
-    dice_face_texes:Rc<RefCell<Vec<DiceFaceTex>>>,
+    state: CombatResult,
+    template: WrapHtml,
+    next_btn: WrapBtn,
+    canvas_top: WrapDiceCanvas,
+    canvas_bot: WrapDiceCanvas,
+    dice_face_texes: Rc<RefCell<Vec<DiceFaceTex>>>,
 }
 
-impl StatefullView<CombatResult> for ViewDiceRoll{
+impl StatefullView<CombatResult> for ViewDiceRoll {
     fn create(doc: &Document) -> Self {
         let id_canvases = (get_random_id(), get_random_id());
         let id_next_btn = get_random_id();
         let template = WrapHtml::new(doc, "dice_roll".to_string(),
-                                    template_dice_roll(&id_canvases, &id_next_btn).as_str());
+                                     template_dice_roll(&id_canvases, &id_next_btn).as_str());
         template.mount();
-        ViewDiceRoll{
+        ViewDiceRoll {
             state: CombatResult::new(),
             template,
             next_btn: WrapBtn::new_from_id(&id_next_btn),
@@ -412,20 +461,19 @@ impl StatefullView<CombatResult> for ViewDiceRoll{
 
     fn update_self(&mut self) {
         console_log!(format!("{:?}", self.state));
-        if self.state.combat_finished{
+        if self.state.combat_finished {
             self.template.set_visibilty(false);
-        }else {
+        } else {
             self.template.set_visibilty(true);
             self.canvas_top.draw_dice_rolls(&self.state.dice_roll_attacker,
                                             self.dice_face_texes.clone());
             self.canvas_bot.draw_dice_rolls(&self.state.dice_roll_defender,
                                             self.dice_face_texes.clone())
         }
-
     }
 
     fn get(&self) -> CombatResult {
-        return self.state.clone()
+        return self.state.clone();
     }
 
     fn hide(&mut self) {
@@ -435,22 +483,30 @@ impl StatefullView<CombatResult> for ViewDiceRoll{
     fn show(&mut self) {
         self.template.set_visibilty(true);
     }
+
+    fn set_handlers(&mut self, game_ref: &Rc<RefCell<Game>>) {
+        let game = game_ref.clone();
+        self.next_btn.set_click_handler(Box::from(move |_|{
+            borrow_game_safe(&game, "dice next btn".to_string(),
+                |mut g| g.handle_ui_dice_next())
+        }))
+    }
 }
 
 
-#[derive(Clone, Default )]
+#[derive(Clone, Default)]
 pub struct StateGameEnd {
     pub active: bool,
     pub armies: u32,
 }
 
-pub struct ViewGameEnd{
-    state:StateArmyPlacement,
-    template:WrapHtml,
+pub struct ViewGameEnd {
+    state: StateArmyPlacement,
+    template: WrapHtml,
     count_label: WrapDiv,
 }
 
-#[derive(Clone )]
+#[derive(Clone)]
 pub enum SelectedView {
     TurnMenu,
     StartPlace,
@@ -462,11 +518,11 @@ pub enum SelectedView {
 pub struct UiStateManager {
     pub turn_menu: ViewTurn,
     pub start_army_placement: ViewStartArmyPlacement,
-    pub army_placement:ViewArmyPlacement,
+    pub army_placement: ViewArmyPlacement,
     pub selected: SelectedView,
-    pub combat:ViewCombat,
-    pub dice_rolls:ViewDiceRoll,
-    pub info_div:WrapDiv,
+    pub combat: ViewCombat,
+    pub dice_rolls: ViewDiceRoll,
+    pub info_div: WrapDiv,
 }
 
 impl UiStateManager {
@@ -492,7 +548,7 @@ impl UiStateManager {
         self.hide_all();
     }
 
-    pub fn update_all(&mut self){
+    pub fn update_all(&mut self) {
         self.turn_menu.update_self();
         self.start_army_placement.update_self();
         self.army_placement.update_self();
@@ -500,22 +556,22 @@ impl UiStateManager {
         self.dice_rolls.update_self();
     }
 
-    pub fn select_view(&mut self, view:&UiState){
+    pub fn select_view(&mut self, view: &UiState) {
         self.hide_all();
-            match view {
-                UiState::ARMY_PLACEMENT_START => {self.start_army_placement.show()}
-                UiState::ARMY_PLACEMENT => {self.army_placement.show()}
-                UiState::TURN => {self.turn_menu.show()}
-                UiState::COMBAT => {self.combat.show()}
-                UiState::DICE_ROLL => {self.dice_rolls.show()}
-                UiState::GAME_END => {todo!()}
-                UiState::CARD_SELECT => {todo!()}
-                _ => {}
-            }
+        match view {
+            UiState::ARMY_PLACEMENT_START => { self.start_army_placement.show() }
+            UiState::ARMY_PLACEMENT => { self.army_placement.show() }
+            UiState::TURN => { self.turn_menu.show() }
+            UiState::COMBAT => { self.combat.show() }
+            UiState::DICE_ROLL => { self.dice_rolls.show() }
+            UiState::GAME_END => { todo!() }
+            UiState::CARD_SELECT => { todo!() }
+            _ => {}
+        }
         self.update_all()
     }
 
-    pub fn hide_all(&mut self){
+    pub fn hide_all(&mut self) {
         self.turn_menu.hide();
         self.start_army_placement.hide();
         self.army_placement.hide();
@@ -523,7 +579,13 @@ impl UiStateManager {
         self.dice_rolls.hide();
     }
 
-
+    pub fn set_handlers(&mut self, game_ref: &Rc<RefCell<Game>>) {
+        self.turn_menu.set_handlers(game_ref);
+        self.start_army_placement.hide();
+        self.army_placement.hide();
+        self.combat.hide();
+        self.dice_rolls.hide();
+    }
 }
 
 
@@ -531,9 +593,19 @@ fn get_random_id() -> String {
     let mut rand_arry = [0u8; 10];
     web_sys::window().unwrap().crypto().unwrap()
         .get_random_values_with_u8_array(&mut rand_arry).unwrap();
-    let ret:String= rand_arry.iter().map(|num|{
+    let ret: String = rand_arry.iter().map(|num| {
         let get_idx = (num / 10) as usize;
         ASCII_LOWER[get_idx]
     }).collect();
     ret
 }
+
+fn borrow_game_safe(game_ref: &Rc<RefCell<Game>>, name:String, func: fn(RefMut<'_, Game>) ) {
+    let borrow = game_ref.try_borrow_mut();
+    if borrow.is_err() {
+        console_log!(format!("could not borrow in {}", name));
+    }else {
+        func(borrow.unwrap())
+    }
+}
+
