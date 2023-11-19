@@ -18,6 +18,7 @@ ui combat roll handler
 ui dice next
 
 misc:
+create debug config that can be loaded with test btn
 
 dones:
 stop printing prov clicked

@@ -161,10 +161,14 @@ pub fn draw_board() {
     draw_board_raw(&canvas, &get_drawing_context(&canvas));
 }
 
-fn draw_board_raw(canvas: &HtmlCanvasElement, context: &CanvasRenderingContext2d) {
+pub fn clear_canvas(canvas: &HtmlCanvasElement, context: &CanvasRenderingContext2d, color_name:&str){
     context.rect(0f64, 0f64, canvas.width() as f64, canvas.height() as f64);
-    context.set_fill_style(&JsValue::from_str("LightCyan"));
+    context.set_fill_style(&JsValue::from_str(color_name));
     context.fill();
+}
+
+fn draw_board_raw(canvas: &HtmlCanvasElement, context: &CanvasRenderingContext2d) {
+    clear_canvas(canvas, context, "LightCyan");
     let image = get_element_by_id("board_2").dyn_into::<HtmlImageElement>()
         .map_err(|_| ()).unwrap();
 

@@ -1,5 +1,5 @@
 use crate::element_getters::set_info_field;
-use crate::model::{Coord, Model, Player, Rules};
+use crate::model::{CombatResult, Coord, Model, Player, Rules};
 use crate::ui::main::UiState;
 use crate::ui::player_setup::PlayerConfig;
 use crate::ui::structs::UiInfo;
@@ -220,20 +220,51 @@ impl Game {
         todo!()
     }
 
-    pub fn handle_ui_reinforce(&mut self){
-        todo!()
-    }
 
     pub fn handle_ui_end_turn(&mut self){
         todo!()
     }
 
     pub fn handle_ui_combat_roll(&mut self, is_attack:bool){
-        self.log(is_attack.to_string())
+        self.log("combat ui handle".to_string());
+        let mut state = self.ui_man.combat.get();
+        if is_attack{
+            state.attack_visible = false;
+        }else {
+            state.defend_visible = false;
+        }
+        if !state.defend_visible && !state.attack_visible{
+            let armies_involved = self.ui_man.combat.get_armies_selected();
+            self.ui_man.dice_rolls.update(CombatResult{
+                armies_attacker: state.armies_attacking,
+                armies_defender: state.armies_defending,
+                losses_defender: 0,
+                losses_attacker: 0,
+                dice_roll_attacker: vec![],
+                dice_roll_defender: vec![],
+                has_rolled: false,
+                combat_finished: false,
+                active_attacker: armies_involved.0,
+                active_defender: armies_involved.1,
+            });
+            self.set_ui_state(UiState::DICE_ROLL);
+        }else {
+            self.ui_man.combat.update(state);
+        }
     }
 
     pub fn handle_ui_dice_next(&mut self){
-        todo!()
+        self.log("dice roll handler".to_string());
+        let mut state = self.ui_man.dice_rolls.get();
+        self.log(format!("{:?}", state));
+        if !state.has_rolled{
+            state = self.model.combat_engine.next_round(state);
+        }else {
+            state.dice_roll_attacker.clear();
+            state.dice_roll_defender.clear();
+            state.has_rolled = false;
+        }
+        self.ui_man.dice_rolls.update(state);
     }
 
 

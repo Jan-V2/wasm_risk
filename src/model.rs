@@ -3,6 +3,7 @@ use std::fmt::Formatter;
 use queues::{IsQueue, Queue};
 use serde::{Deserialize, Serialize};
 use crate::data_include::{ get_map_data, get_navtree_data};
+use gloo::console::log as console_log;
 
 
 pub struct Model{
@@ -10,6 +11,7 @@ pub struct Model{
     pub nav_tree:NavTree,
     pub players:Vec<Player>,
     pub rules:Rules,
+    pub combat_engine:CombatEngine,
 }
 
 impl Model{
@@ -19,6 +21,7 @@ impl Model{
             nav_tree: serde_json::from_str(&get_navtree_data()).unwrap(),
             players: vec![],
             rules: Rules {},
+            combat_engine: CombatEngine {},
         }
     }
 
@@ -75,7 +78,10 @@ pub struct CombatResult {
     pub losses_attacker:u32,
     pub dice_roll_attacker:Vec<u32>,
     pub dice_roll_defender :Vec<u32>,
+    pub has_rolled:bool,
     pub combat_finished:bool,
+    pub active_defender: u32,
+    pub active_attacker: u32,
 }
 
 impl CombatResult {
@@ -83,10 +89,13 @@ impl CombatResult {
         CombatResult{
             armies_attacker: 0,
             armies_defender: 0,
+            active_attacker:0,
+            active_defender:0,
             losses_defender: 0,
             losses_attacker: 0,
             dice_roll_attacker: vec![],
             dice_roll_defender: vec![],
+            has_rolled: false,
             combat_finished: true,//todo flip this and use default derive
         }
     }
@@ -104,13 +113,12 @@ impl CombatEngine{
         (js_sys::Math::random() * 5f64).round() as u32 +1
     }
 
-    pub fn next_round(&mut self, attacking_armies:u32, defending_armies:u32,
-                      attack_armies_active:u32, defence_armies_active:u32 ) -> CombatResult {
-        if attack_armies_active > attacking_armies
+    pub fn next_round(&mut self, mut combat_data: CombatResult ) -> CombatResult {
+/*        if combat_data.a > attacking_armies
             || defence_armies_active > defending_armies{
             panic!("Incorrect number of attackers/defenders attacking {} out of {} defending {} out of {}",
                    attack_armies_active, attacking_armies, defence_armies_active, defending_armies)
-        }
+        }*/
 
         let swap_indexes = |dice:&mut Vec<u32>, idx:usize|{
             let temp = dice[idx];
@@ -134,35 +142,30 @@ impl CombatEngine{
 
         let mut attacking_dice:Vec<u32> = vec![];
         let mut defending_dice:Vec<u32> = vec![];
-        for _ in 0..attack_armies_active {
+        for _ in 0..combat_data.active_attacker {
             attacking_dice.push(self.roll_dice())
         }
         sort_dice(&mut attacking_dice);
-        for _ in 0..defending_dice.len(){
-            attacking_dice.push(self.roll_dice())
+        for _ in 0..combat_data.active_defender{
+            defending_dice.push(self.roll_dice())
         }
         sort_dice(&mut defending_dice);
+        
+        combat_data.dice_roll_attacker = attacking_dice;
+        combat_data.dice_roll_defender = defending_dice;
+        combat_data.has_rolled = true;
 
-        let mut ret = CombatResult {
-            armies_attacker: attacking_armies,
-            armies_defender: defending_armies,
-            losses_defender: 0,
-            losses_attacker: 0,
-            dice_roll_attacker: attacking_dice,
-            dice_roll_defender: defending_dice,
-            combat_finished: false,
-        };
-
-        for i in 0..ret.dice_roll_defender.len(){
-            if ret.dice_roll_attacker[i] > ret.dice_roll_defender[i]{
-                ret.losses_defender += 1;
+        console_log!(format!("{:?}", combat_data));
+        for i in 0..combat_data.dice_roll_defender.len(){
+            if combat_data.dice_roll_attacker[i] > combat_data.dice_roll_defender[i]{
+                combat_data.losses_defender += 1;
             }else {
-                ret.losses_attacker += 1;
+                combat_data.losses_attacker += 1;
             }
         }
-        ret.armies_attacker -= ret.losses_attacker;
-        ret.armies_defender -= ret.losses_defender;
-        ret
+        combat_data.armies_attacker -= combat_data.losses_attacker;
+        combat_data.armies_defender -= combat_data.losses_defender;
+        combat_data
     }
 }
 

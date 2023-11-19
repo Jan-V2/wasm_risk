@@ -2,7 +2,7 @@ use std::cell::RefCell;
 use std::rc::Rc;
 use wasm_bindgen::{JsCast};
 use web_sys::{CssStyleDeclaration, Document, HtmlButtonElement, HtmlCanvasElement, HtmlDivElement, HtmlElement, HtmlHeadingElement, HtmlOptionElement, HtmlSelectElement, MouseEvent, Node};
-use crate::canvas::{DiceFaceTex, draw_dice};
+use crate::canvas::{clear_canvas, DiceFaceTex, draw_dice};
 use crate::element_getters::{create_new_elem, get_element_by_id, attach_handler_to_btn, get_T_from_id, get_drawing_context};
 use crate::model::Coord;
 use crate::ui::traits::*;
@@ -129,13 +129,17 @@ impl WrapDiceCanvas {
     pub fn draw_dice_rolls(&self, dice_rolls:&Vec<u32>, dice_tex:Rc<RefCell<Vec<DiceFaceTex>>>){
         for i in 0..dice_rolls.len(){
             let roll = dice_rolls[i];
-            if roll > 6{
+            if roll > 6 || roll == 0{
                 panic!("invalid dice roll. number {}", roll)
             }
             let size = self.elem.height();
             draw_dice(get_drawing_context(&self.elem), &dice_tex.as_ref().borrow()[(roll-1) as usize],
             Coord{ y: 0, x: i as i32 * size as i32 }, size )
         }
+    }
+
+    pub fn clear_canvas(&self){
+        clear_canvas(&self.elem, &get_drawing_context(&self.elem), "LightCyan")
     }
 }
 
