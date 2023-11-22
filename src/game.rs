@@ -127,6 +127,8 @@ impl Game {
                             armies_defending: prov_defend.army_count,
                             id_attacker: prov_attack.owner_id,
                             id_defender: prov_defend.owner_id,
+                            prov_id_attacker: prov_attack.id,
+                            prov_id_defender: prov_defend.id,
                             attack_visible: true,
                             defend_visible: true,
                         });
@@ -255,18 +257,57 @@ impl Game {
 
     pub fn handle_ui_dice_next(&mut self){
         self.log("dice roll handler".to_string());
-        let mut state = self.ui_man.dice_rolls.get();
-        self.log(format!("{:?}", state));
-        if !state.has_rolled{
-            state = self.model.combat_engine.next_round(state);
+        let mut combat_result = self.ui_man.dice_rolls.get();
+        self.log(format!("{:?}", combat_result));
+        if !combat_result.has_rolled{
+            self.log("rolling".to_string());
+            combat_result = self.model.combat_engine.next_round(combat_result);
+            self.ui_man.dice_rolls.update(combat_result);
         }else {
-            state.dice_roll_attacker.clear();
-            state.dice_roll_defender.clear();
-            state.has_rolled = false;
+            self.log("not rolling".to_string());
+            combat_result.dice_roll_attacker.clear();
+            combat_result.dice_roll_defender.clear();
+            combat_result.losses_defender = 0;
+            combat_result.losses_attacker = 0;
+          //  state.has_rolled = false;
+            let mut combat_state = self.ui_man.combat.get();
+            combat_state.armies_attacking = combat_result.armies_attacker;
+            combat_state.armies_defending = combat_result.armies_defender;
+            self.apply_combat_result_to_map(&combat_state);
+            if combat_result.combat_finished{
+
+                self.log("combat finished".to_string());
+            }else{
+                self.ui_man.combat.update(combat_state);
+                self.ui_man.combat.reset_player_visibilty(&self.model.players);
+                self.set_ui_state(UiState::COMBAT);
+                self.log("combat ongoing".to_string());
+            }
         }
-        self.ui_man.dice_rolls.update(state);
     }
 
+    fn apply_combat_result_to_map(&mut self, state_combat: &StateCombat) {
+        self.log("combat finished handler".to_string());
+        let mut prov_attack = (*self.model.get_prov_from_id(&state_combat.prov_id_attacker).unwrap()).clone();
+        let mut prov_defend  = (*self.model.get_prov_from_id(&state_combat.prov_id_defender).unwrap()).clone();
+
+        if state_combat.armies_defending == 0 && state_combat.armies_attacking > 0{
+            // attacker won
+            self.log("attack succeeded".to_string());
+            prov_attack.army_count = 1;
+            prov_defend.army_count = state_combat.armies_attacking;
+            prov_defend.owner_id = prov_attack.owner_id;
+        }else {
+            // attack ongoing or failed
+            self.log("attack failed".to_string());
+            prov_attack.army_count = 1 + state_combat.armies_attacking;
+            prov_defend.army_count = state_combat.armies_defending;
+        }
+        self.log(format!("{:?}", prov_attack));
+        self.model.set_prov(prov_attack);
+        self.model.set_prov(prov_defend);
+        self.draw_board();
+    }
 
     pub fn handle_canvas_noop(&mut self, state :UiState){
         self.log(format!("in state: {:?} the canvas is not handled", state))
@@ -461,4 +502,5 @@ impl Game {
     pub fn set_self_ref(&mut self, self_ref: Rc<RefCell<Game>>) {
         self.ui_man.set_handlers(&self_ref)
     }
+
 }

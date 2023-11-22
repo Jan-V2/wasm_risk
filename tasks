@@ -18,14 +18,19 @@ ui combat roll handler
 ui dice next
 
 misc:
-create debug config that can be loaded with test btn
 
 dones:
 stop printing prov clicked
 print all to info dif
 add more structure to Game
+update armies after each combat cycle
+
 
 attach ui to handlers:
 ui reinforce handler
 ui combat roll handler
 ui dice next
+create debug config that can be loaded with test btn
+
+nice to haves:
+player names

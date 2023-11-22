@@ -5,7 +5,7 @@ use wasm_bindgen::JsCast;
 use web_sys::{Document, HtmlOptionElement};
 use crate::canvas::{DiceFaceTex, get_dice_tex};
 use crate::element_getters::{get_document};
-use crate::model::CombatResult;
+use crate::model::{CombatResult, Player};
 use crate::ui::wrap_elem::{WrapBtn, WrapHtml, WrapDiv, WrapSelect, WrapHeading, WrapDiceCanvas, chk_set_visbility};
 use crate::ui::templates::*;
 use crate::ui::traits::{HTML_Div, HTMLable};
@@ -267,6 +267,8 @@ pub struct StateCombat {
     pub armies_defending: u32,
     pub id_attacker: u32,
     pub id_defender: u32,
+    pub prov_id_attacker: u32,
+    pub prov_id_defender: u32,
     pub attack_visible:bool,
     pub defend_visible:bool,
 }
@@ -295,6 +297,15 @@ impl ViewCombat {
             self.menu_attack.select.get_value().parse().unwrap(),
             self.menu_defend.select.get_value().parse().unwrap()
             )
+    }
+
+    pub fn reset_player_visibilty(&mut self, players:&Vec<Player>){
+        if !players[self.state.id_attacker as usize].is_computer{
+            self.state.attack_visible = true;
+        }
+        if !players[self.state.id_defender as usize].is_computer{
+            self.state.defend_visible = true;
+        }
     }
 
     fn show_attack(&mut self, is_visible: bool) {
@@ -368,7 +379,7 @@ impl StatefullView<StateCombat> for ViewCombat {
 
         let handle_combat_view = |view: &mut CombatArmySelect, player: &u32, armies: u32,
                                   is_attacker: bool| {
-            view.player_text.set_text(format!("Player {}", player));
+            view.player_text.set_text(format!("Player {}", player + 1));
             if armies > 2 && is_attacker {
                 log!(format!("attacker and > 2 is attack {} armies {}",is_attacker, armies));
                 set_visibilty_child(&view.select, 1, true);
@@ -439,7 +450,7 @@ impl StatefullView<CombatResult> for ViewDiceRoll {
                                      template_dice_roll(&id_canvases, &id_next_btn).as_str());
         template.mount();
         ViewDiceRoll {
-            state: CombatResult::new(),
+            state: CombatResult::default(),
             template,
             next_btn: WrapBtn::new_from_id(&id_next_btn),
             canvas_top: WrapDiceCanvas::new_from_id(&id_canvases.0),
@@ -458,18 +469,16 @@ impl StatefullView<CombatResult> for ViewDiceRoll {
     }
 
     fn update_self(&mut self) {
+        console_log!("updateing dice view");
         console_log!(format!("{:?}", self.state));
-        if self.state.combat_finished {
-            self.template.set_visibilty(false);
-        } else {
+
             self.canvas_top.clear_canvas();
             self.canvas_bot.clear_canvas();
-            self.template.set_visibilty(true);
             self.canvas_top.draw_dice_rolls(&self.state.dice_roll_attacker,
                                             self.dice_face_texes.clone());
             self.canvas_bot.draw_dice_rolls(&self.state.dice_roll_defender,
                                             self.dice_face_texes.clone())
-        }
+
     }
 
     fn get(&self) -> CombatResult {

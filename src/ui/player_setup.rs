@@ -106,6 +106,8 @@ pub fn PlayersSetup< G : Html>( props:PlayersSetupProps) -> View<G> {
 
     let error_msg_sig:Signal<String> = create_signal( "".to_string());
 
+    let props2 = props.clone();
+
     let next = move || {
         let tmp_player_config = (player_config_sig.get()).clone();
 
@@ -157,6 +159,15 @@ pub fn PlayersSetup< G : Html>( props:PlayersSetupProps) -> View<G> {
         }
 
     };
+    let test = move ||{
+        let config = PlayerConfig::new();
+        let mut colors = config.player_colors.get_clone();
+        colors[0] = PLAYER_COLORS[0].to_string();
+        colors[1] = PLAYER_COLORS[1].to_string();
+        config.player_colors.set(colors);
+        props2.game_ref.borrow_mut().set_player_config(config);
+        props2.ui_state.set(UiState::ARMY_PLACEMENT_START);
+    };
 
 
     let player_options:Signal<View<G>> = create_signal(View::new_fragment(
@@ -195,6 +206,9 @@ pub fn PlayersSetup< G : Html>( props:PlayersSetupProps) -> View<G> {
                 "Next"
             }
             label(){(error_msg_sig.get_clone())}
+            button(id="test", type="button", class="btn btn-primary", on:click= move |_| test()){
+                "test"
+            }
         }
     }
 }

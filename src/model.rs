@@ -53,6 +53,16 @@ impl Model{
         }
     }
 
+    pub fn set_prov(&mut self, new_prov:Province){
+        for i in 0..self.provinces.len(){
+            if self.provinces[i].id == new_prov.id{
+                self.provinces[i] = new_prov;
+                return;
+            }
+        }
+        panic!("prov not found in prov array")
+    }
+
     pub fn get_owner_from_prov_id(&self, prov_id:&u32)-> Option<u32>{
         let prov = self.get_prov_from_id(prov_id);
         if prov.is_some(){
@@ -70,7 +80,7 @@ impl Model{
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct CombatResult {
     pub armies_attacker:u32,
     pub armies_defender:u32,
@@ -82,23 +92,6 @@ pub struct CombatResult {
     pub combat_finished:bool,
     pub active_defender: u32,
     pub active_attacker: u32,
-}
-
-impl CombatResult {
-    pub fn new()->CombatResult{
-        CombatResult{
-            armies_attacker: 0,
-            armies_defender: 0,
-            active_attacker:0,
-            active_defender:0,
-            losses_defender: 0,
-            losses_attacker: 0,
-            dice_roll_attacker: vec![],
-            dice_roll_defender: vec![],
-            has_rolled: false,
-            combat_finished: true,//todo flip this and use default derive
-        }
-    }
 }
 
 pub struct CombatEngine{
@@ -114,11 +107,11 @@ impl CombatEngine{
     }
 
     pub fn next_round(&mut self, mut combat_data: CombatResult ) -> CombatResult {
-/*        if combat_data.a > attacking_armies
-            || defence_armies_active > defending_armies{
-            panic!("Incorrect number of attackers/defenders attacking {} out of {} defending {} out of {}",
-                   attack_armies_active, attacking_armies, defence_armies_active, defending_armies)
-        }*/
+        assert!(
+            combat_data.combat_finished == false &&
+            combat_data.losses_defender == 0 &&
+            combat_data.losses_attacker == 0
+        );
 
         let swap_indexes = |dice:&mut Vec<u32>, idx:usize|{
             let temp = dice[idx];
@@ -156,16 +149,37 @@ impl CombatEngine{
         combat_data.has_rolled = true;
 
         console_log!(format!("{:?}", combat_data));
-        for i in 0..combat_data.dice_roll_defender.len(){
+        let dice_min = if combat_data.active_attacker > combat_data.active_defender {
+            combat_data.active_defender as usize
+        }else {
+            combat_data.active_attacker as usize
+        };
+
+        for i in 0..dice_min{
             if combat_data.dice_roll_attacker[i] > combat_data.dice_roll_defender[i]{
                 combat_data.losses_defender += 1;
             }else {
                 combat_data.losses_attacker += 1;
             }
         }
-        combat_data.armies_attacker -= combat_data.losses_attacker;
-        combat_data.armies_defender -= combat_data.losses_defender;
-        combat_data
+
+        let attacking_signed = combat_data.armies_attacker as i32 - combat_data.losses_attacker as i32 ;
+        if attacking_signed > -1{
+            combat_data.armies_attacker = attacking_signed as u32
+        }else {
+            combat_data.armies_attacker = 0;
+        }
+        let defending_signed = combat_data.armies_defender as i32 - combat_data.losses_defender as i32;
+        if defending_signed > -1{
+            combat_data.armies_defender= defending_signed as u32
+        }else {
+            combat_data.armies_defender = 0;
+        }
+
+        if combat_data.armies_attacker == 0 || combat_data.armies_defender == 0 {
+            combat_data.combat_finished = true;
+        }
+        combat_data    
     }
 }
 
@@ -231,7 +245,7 @@ pub enum TerritoryCardType {
     Cavalry
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Province{
     pub name:String,
     pub id:u32,
