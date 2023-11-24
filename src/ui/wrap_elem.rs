@@ -145,7 +145,6 @@ impl WrapDiceCanvas {
 
 
 pub struct WrapHtml {
-    template:String,
     elem:HtmlElement,
     id:String
 }
@@ -155,7 +154,6 @@ impl WrapHtml {
         let elem:HtmlElement = create_new_elem(document, "div");
         elem.set_inner_html(template);
         WrapHtml {
-            template:template.to_string(),
             elem,
             id,
         }
@@ -197,7 +195,6 @@ impl HTMLable for WrapHtml {
 
     fn new_from_id(id: &String) -> Self {
         WrapHtml{
-            template: "".to_string(),
             elem: get_T_from_id(id.as_str()),
             id:id.clone(),
         }

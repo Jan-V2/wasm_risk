@@ -15,31 +15,6 @@ pub fn template_army_placement(id_label_count:&String)->String{
 "#)
 }
 
-
-pub fn template_turn_start()->String{
-    format!(r#"
-<div id=""></div>
-"#)
-}
-
-pub fn template_combat()->String{
-    format!(r#"
-<div id=""></div>
-"#)
-}
-
-pub fn template_combat_end()->String{
-    format!(r#"
-<div id=""></div>
-"#)
-}
-
-pub fn template_game_end()->String{
-    format!(r#"
-<div id=""></div>
-"#)
-}
-
 pub fn template_turn_menu(player_label:&String, btn_next_turn:&String)->String{
 
     let mut buf = Buffer::new();

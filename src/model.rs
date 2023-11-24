@@ -44,15 +44,6 @@ impl Model{
         None
     }
 
-    pub fn get_prov_name_from_id(&self, prov_id:&u32) ->String{
-        let prov = self.get_prov_from_id(prov_id);
-        if prov.is_some(){
-            return prov.unwrap().name.clone();
-        }else{
-            "prov not found".to_string()
-        }
-    }
-
     pub fn set_prov(&mut self, new_prov:Province){
         for i in 0..self.provinces.len(){
             if self.provinces[i].id == new_prov.id{
@@ -98,10 +89,6 @@ pub struct CombatEngine{
 }
 
 impl CombatEngine{
-    pub fn new()->Self{
-        return CombatEngine{}
-    }
-
     fn roll_dice(&self)->u32{
         (js_sys::Math::random() * 5f64).round() as u32 +1
     }

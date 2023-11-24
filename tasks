@@ -1,6 +1,7 @@
 todos:
+retreat button
+finish combat and add next turn logic
 attach handlers to end turn button which gives turn to next player
-make starting combat open up combat view
 
 reinforce button:
 make reinforce button disapear after action
@@ -24,6 +25,7 @@ stop printing prov clicked
 print all to info dif
 add more structure to Game
 update armies after each combat cycle
+make starting combat open up combat view
 
 
 attach ui to handlers:

@@ -6,6 +6,7 @@ mod game;
 mod utils;
 mod data_include;
 mod ui;
+mod game_event_handlers;
 
 use std::cell::RefCell;
 use std::rc::Rc;

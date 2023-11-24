@@ -3,7 +3,6 @@ use sycamore::prelude::*;
 use std::rc::Rc;
 use crate::game::Game;
 use crate::ui::player_setup::*;
-use crate::ui::structs::{ UiInfo};
 
 
 #[allow(non_camel_case_types)]
@@ -20,6 +19,22 @@ pub enum UiState {
     CARD_SELECT,
 
 }
+
+#[derive(Clone, Copy)]
+pub struct UiInfo{
+    pub ui_state: Signal<UiState>,
+    pub active_player: Signal<u32>,
+}
+
+impl UiInfo {
+    pub fn new()->UiInfo{
+        UiInfo{
+            ui_state:create_signal(UiState::SETUP),
+            active_player: create_signal(0),
+        }
+    }
+}
+
 
 #[derive(Props)]
 pub struct UiMainProps {
