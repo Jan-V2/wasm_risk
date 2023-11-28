@@ -207,19 +207,18 @@ pub fn get_dice_tex() -> Rc<RefCell<Vec<DiceFaceTex>>>{
     let face_height = image.height() / texes_along_height;
     let face_width = image.width() / texes_along_width;
 
-    for face_row in 0..texes_along_width {
-        for face_col in 0..texes_along_height {
+    for face_row in 0..texes_along_height {
+        for face_col in 0..texes_along_width {
             let mut new_face = DiceFaceTex{
                 size: face_width,
                 img_data: Clamped(Vec::new()),
                 bitmap: None,
             };
 
-            let start_y = face_height * face_col;
+            let start_y = face_height * face_row;
 
             for idx_y in start_y..start_y + face_height{
-                let start_idx = (idx_y * image.width() + face_row * face_width) * 4;
-
+                let start_idx = (idx_y * image.width() + face_col * face_width) * 4;
                 new_face.img_data.append(&mut img_data[
                     start_idx as usize..(start_idx + face_width *4) as usize
                     ].to_vec());

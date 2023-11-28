@@ -11,6 +11,7 @@ use crate::ui::wrap_elem::{WrapDiv, WrapHtml};
 pub struct StateArmyPlacement {
     pub armies: u32,
     pub active_player: u32,
+    pub end_turn_placement:bool
 }
 
 
@@ -53,7 +54,7 @@ impl StatefullView<StateArmyPlacement> for ViewArmyPlacement {
     }
 
     fn update_self(&mut self) {
-        self.count_label.set_text(format!("You still need to Place {} armies",
+        self.count_label.set_text(&format!("You still need to Place {} armies",
                                           self.state.armies));
     }
 

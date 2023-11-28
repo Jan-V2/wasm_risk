@@ -1,12 +1,7 @@
 todos:
-retreat button
 finish combat and add next turn logic
-attach handlers to end turn button which gives turn to next player
-
-reinforce button:
-make reinforce button disapear after action
-redirect to placement view
-redirect from placemen to next player
+add continent provinces 
+rename main.rs and restructure code
 
 movement phase:
 redirect next phase to movement
@@ -14,11 +9,10 @@ implement movement
 
 handlers:
 canvas move handler
-ui reinforce handler
-ui combat roll handler
-ui dice next
 
 misc:
+detect when a player is knocked out, and skip their turn
+
 
 dones:
 stop printing prov clicked
@@ -26,6 +20,15 @@ print all to info dif
 add more structure to Game
 update armies after each combat cycle
 make starting combat open up combat view
+attach handlers to end turn button which gives turn to next player
+display losses in dice view
+retreat button
+
+
+handlers:
+ui reinforce handler
+ui combat roll handler
+ui dice next
 
 
 attach ui to handlers:

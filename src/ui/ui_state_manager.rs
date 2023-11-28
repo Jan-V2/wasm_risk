@@ -36,10 +36,6 @@ pub trait StatefullView<T> {
     fn set_handlers(&mut self, game_ref: &Rc<RefCell<Game>>);
 }
 
-
-
-
-
 #[derive(Clone)]
 pub enum SelectedView {
     TurnMenu,

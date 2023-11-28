@@ -22,7 +22,7 @@ pub fn template_turn_menu(player_label:&String, btn_next_turn:&String)->String{
     writeln!(main.div().attr(
         fmt_style("margin-bottom: 15px;").as_str()).attr(fmt_id(player_label).as_str())
              , "Player:").unwrap();
-    writeln!(main.button().attr(fmt_id(btn_next_turn).as_str()), "Next turn").unwrap();
+    writeln!(main.button().attr(fmt_id(btn_next_turn).as_str()), "").unwrap();
     buf.finish()
 }
 
@@ -50,7 +50,7 @@ pub fn template_dice_roll(id_canvases:&(String, String), next_btn:&String)->Stri
 
 pub fn template_combat_menu(title:&String, location_text:&String, balance_text:&String,
                             select:&(String, String), player_text:&(String, String),
-                            button_action:&(String, String), id_main:&(String, String)) ->String{
+                            button_action:&(String, String), id_main:&(String, String), retreat:Option<&String>) ->String{
     let mut buf = Buffer::new();
     let mut main = buf.div().attr(fmt_id(title).as_str());
 
@@ -59,14 +59,14 @@ pub fn template_combat_menu(title:&String, location_text:&String, balance_text:&
         fmt_style("margin-bottom: 15px;").as_str()
     ), "balance example").unwrap();
     army_selector(&mut main, true, &id_main.0,
-                  &select.0, &player_text.0, &button_action.0);
+                  &select.0, &player_text.0, &button_action.0, retreat);
     army_selector(&mut main, false, &id_main.1,
-                  &select.1, &player_text.1, &button_action.1);
+                  &select.1, &player_text.1, &button_action.1, None);
     buf.finish()
 }
 
-pub fn army_selector(node:&mut Node, is_attack:bool, id_main:&String, id_select:&String, id_player_label:&String,
-                    id_button:&String){
+fn army_selector(node:&mut Node, is_attack:bool, id_main:&String, id_select:&String, id_player_label:&String,
+                    id_button:&String, id_retreat:Option<&String>){
     let mut main = node.div().attr(fmt_style("margin-bottom: 30px;").as_str())
         .attr(fmt_id(id_main).as_str());
     writeln!(main.div().attr(fmt_id(&id_player_label).as_str())
@@ -99,7 +99,11 @@ pub fn army_selector(node:&mut Node, is_attack:bool, id_main:&String, id_select:
     let mut footer = main.div();
     let _ = footer.div().attr(fmt_style("height: 5px;").as_str());
     if is_attack{
-        writeln!(footer.button().attr(fmt_id(&id_button).as_str()), "Attack").unwrap()
+        writeln!(footer.button().attr(fmt_id(&id_button).as_str()), "Attack").unwrap();
+        if id_retreat.is_none() {
+            panic!("no id for attack bnt")
+        }
+        writeln!(footer.button().attr(fmt_id(id_retreat.unwrap()).as_str()), "Retreat").unwrap()
     }else {
         writeln!(footer.button().attr(fmt_id(&id_button).as_str()), "Defend").unwrap()
     }

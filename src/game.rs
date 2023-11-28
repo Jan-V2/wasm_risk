@@ -1,4 +1,3 @@
-use crate::element_getters::set_info_field;
 use crate::model::{Coord, Model, Player, Rules};
 use crate::ui::main::{UiInfo, UiState};
 use crate::ui::player_setup::PlayerConfig;
@@ -13,6 +12,7 @@ use js_sys::Math::sqrt;
 use std::cell::RefCell;
 use std::rc::Rc;
 use crate::ui::view_combat::StateCombat;
+use crate::ui::view_info::ViewInfo;
 
 pub struct ProvLookupTable {
     pub pixels: Vec<[u8; 3]>,
@@ -52,7 +52,7 @@ impl ProvLookupTable {
 }
 
 #[derive(Default)]
-pub struct StateTurn {
+pub struct GameTurnState {
     pub(super) attack_target: Option<u32>,
 }
 
@@ -60,10 +60,11 @@ pub struct Game {
     pub model: Model,
     pub prov_lookup: ProvLookupTable,
     pub flag_scale: f64,
-    pub ui_info: Option<UiInfo>,
+    pub config_sig: Option<UiInfo>,
     pub logging: bool,
-    pub state_turn: StateTurn,
+    pub state_turn: GameTurnState,
     pub ui_man: UiStateManager,
+    pub info_display_div: ViewInfo
 }
 
 impl Game {
@@ -74,10 +75,12 @@ impl Game {
             model: Model::new_from_json(),
             prov_lookup,
             flag_scale: 0.5,
-            ui_info: None,
+            config_sig: None,
             logging: use_logging,
             state_turn: Default::default(),
             ui_man: ui_state_man,
+            info_display_div: ViewInfo::create(
+                &"text_out".to_string(), "setup".to_string()),
         };
     }
 
@@ -152,28 +155,42 @@ impl Game {
         }
     }
 
-
     pub(super) fn log(&self, msg: String) {
         if self.logging {
             console_log!(msg)
         }
     }
 
-    pub(super) fn info_print(&self, msg: String) {
-        set_info_field(msg)
-    }
+
 
     pub(super) fn ui_info_ref(&self) -> &UiInfo {
-        self.ui_info.as_ref().unwrap()
+        self.config_sig.as_ref().unwrap()
     }
 
-    pub fn set_ui_info(&mut self, info: UiInfo) {
-        self.ui_info = Some(info);
+    pub fn set_config_sig(&mut self, info: UiInfo) {
+        self.config_sig = Some(info);
     }
 
     pub(super) fn set_ui_state(&mut self, state: UiState) {
+        self.state_turn.attack_target = None;
         self.ui_man.select_view(&state);
-        self.ui_info.unwrap().ui_state.set(state);
+        self.config_sig.unwrap().ui_state.set(state.clone());
+        match state {
+            UiState::SETUP => {self.info_display_div.set_default(
+                "".to_string())}
+            UiState::ARMY_PLACEMENT | UiState::ARMY_PLACEMENT_START => {self.info_display_div.set_default(
+                "Click on your own provinces to place your armies".to_string())}
+            UiState::TURN => {self.info_display_div.set_default(
+                "Click on your own province to attack from there, or press end turn".to_string())}
+            UiState::MOVE => {todo!()}
+            UiState::COMBAT => {self.info_display_div.set_default(
+                "Select the number of armies you want to use and click attack/defend".to_string())}
+            UiState::DICE_ROLL => {self.info_display_div.set_default(
+                "".to_string())}
+            UiState::GAME_END => {self.info_display_div.set_default(
+                "Game Over".to_string())}
+            UiState::CARD_SELECT => {todo!()}
+        }
     }
 
     pub fn lookup_coord(&self, clicked_coord: &Coord) -> Option<u32> {
@@ -216,17 +233,17 @@ impl Game {
     pub(super) fn is_owned_by_active(&self, prov_id: &u32) -> bool {
         let owner = self.model.get_owner_from_prov_id(prov_id);
         if owner.is_some() {
-            return owner.unwrap() == self.ui_info.unwrap().active_player.get();
+            return owner.unwrap() == self.config_sig.unwrap().active_player.get();
         }
         false
     }
 
-    pub fn set_active_player(&mut self, active_player: u32) {
-        self.ui_info.unwrap().active_player.set(active_player)
+    pub fn set_active_player_signal(&mut self, active_player: u32) {
+        self.config_sig.unwrap().active_player.set(active_player)
     }
 
     pub fn get_active_player(&mut self) -> u32 {
-        self.ui_info.unwrap().active_player.get()
+        self.config_sig.unwrap().active_player.get()
     }
 
     pub fn set_player_config(&mut self, config: PlayerConfig) {

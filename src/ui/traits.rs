@@ -11,7 +11,7 @@ pub trait HTMLable{
 
 pub trait HTML_Div where Self:HTMLable {
     fn new(document:&Document, id:String, text:String)-> Self;
-    fn set_text(&mut self, new_str:String);
+    fn set_text(&mut self, new_str:&String);
     fn get_text(&self)->String;
 }
 

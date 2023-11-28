@@ -69,6 +69,16 @@ impl Model{
         }
         None
     }
+
+    pub fn get_prov_count_owned_by_player(&self, player_id: u32)->u32{
+        let mut ret = 0;
+        for prov in &self.provinces{
+            if prov.owner_id == player_id{
+                ret +=1;
+            }
+        }
+        return ret;
+    }
 }
 
 #[derive(Clone, Debug, Default)]
@@ -108,14 +118,16 @@ impl CombatEngine{
 
         let sort_dice = |dice:&mut Vec<u32>|{
             let len = dice.len();
-            if len > 1{
-                if dice[0] > dice[1]{
-                    swap_indexes(dice, 0)
+            for _ in 0..2{
+                if len > 2{
+                    if dice[1] < dice[2]{
+                        swap_indexes(dice, 1)
+                    }
                 }
-            }
-            if len > 2{
-                if dice[1] > dice[2]{
-                    swap_indexes(dice, 1)
+                if len > 1{
+                    if dice[0] < dice[1]{
+                        swap_indexes(dice, 0)
+                    }
                 }
             }
         };

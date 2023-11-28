@@ -57,8 +57,8 @@ impl StatefullView<StateStartArmyPlacement> for ViewStartArmyPlacement {
     }
 
     fn update_self(&mut self) {
-        self.player_label.set_text(format!("Player {}", self.state.current_player + 1));
-        self.army_count_label.set_text(format!("{} armies still available.",
+        self.player_label.set_text(&format!("Player {}", self.state.current_player + 1));
+        self.army_count_label.set_text(&format!("{} armies still available.",
                                                self.state.armies[self.state.current_player as usize]));
     }
 

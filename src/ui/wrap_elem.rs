@@ -25,8 +25,8 @@ impl HTML_Div for WrapHeading {
         ret
     }
 
-    fn set_text(&mut self, new_str: String) {
-        self.text = new_str;
+    fn set_text(&mut self, new_str: &String) {
+        self.text = new_str.clone();
         self.elem.set_inner_text(self.text.as_str())
     }
 
@@ -54,8 +54,8 @@ impl HTML_Div for WrapDiv {
         ret
     }
 
-    fn set_text(&mut self, new_str: String) {
-        self.text = new_str;
+    fn set_text(&mut self, new_str: &String) {
+        self.text = new_str.clone();
         self.elem.set_inner_text(self.text.as_str())
     }
 
@@ -87,6 +87,10 @@ impl WrapSelect {
     pub fn get_value(&self)->String{
         self.elem.value()
     }
+
+    pub fn set_value(&self, value:&str){
+        self.elem.set_value(value)
+    }
 }
 
 
@@ -109,6 +113,10 @@ impl WrapBtn {
     pub fn set_click_handler(&mut self, clojure: Box<dyn FnMut(MouseEvent)>){
         attach_handler_to_btn(&self.elem, "click", clojure)
     }
+
+    pub fn set_text(&mut self, text: &str){
+        self.elem.set_inner_text(text)
+    }
 }
 
 pub struct WrapDiceCanvas{
@@ -127,19 +135,22 @@ impl WrapDiceCanvas {
     }
 
     pub fn draw_dice_rolls(&self, dice_rolls:&Vec<u32>, dice_tex:Rc<RefCell<Vec<DiceFaceTex>>>){
+
         for i in 0..dice_rolls.len(){
             let roll = dice_rolls[i];
             if roll > 6 || roll == 0{
                 panic!("invalid dice roll. number {}", roll)
             }
             let size = self.elem.height();
-            draw_dice(get_drawing_context(&self.elem), &dice_tex.as_ref().borrow()[(roll-1) as usize],
+            draw_dice(get_drawing_context(&self.elem),
+                      &dice_tex.as_ref().borrow()[(roll-1) as usize],
             Coord{ y: 0, x: i as i32 * size as i32 }, size )
         }
     }
 
     pub fn clear_canvas(&self){
-        clear_canvas(&self.elem, &get_drawing_context(&self.elem), "LightCyan")
+        clear_canvas(&self.elem, &get_drawing_context(
+            &self.elem), "LightCyan")
     }
 }
 

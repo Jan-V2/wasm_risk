@@ -1,6 +1,6 @@
 use std::cell::RefCell;
 use std::rc::Rc;
-use gloo::console::log;
+//use gloo::console::log;
 use web_sys::{Document, HtmlOptionElement};
 use crate::model::Player;
 use crate::ui::templates::template_combat_menu;
@@ -34,6 +34,7 @@ pub struct ViewCombat {
     balance_text: WrapDiv,
     menu_defend: CombatArmySelect,
     menu_attack: CombatArmySelect,
+    btn_retreat: WrapBtn,
 }
 
 pub struct CombatArmySelect {
@@ -72,11 +73,11 @@ impl StatefullView<StateCombat> for ViewCombat {
         let id_select = (get_random_id(), get_random_id());
         let id_player_text = (get_random_id(), get_random_id());
         let id_btn = (get_random_id(), get_random_id());
+        let id_retreat = get_random_id();
 
         let template = WrapHtml::new(doc, "combat".to_string(), template_combat_menu(
             &id_title, &id_location, &id_balance, &id_select, &id_player_text,
-            &id_btn, &id_main,
-        ).as_str());
+            &id_btn, &id_main, Some(&id_retreat)).as_str());
         template.mount();
         ViewCombat { state: Default::default(), title: WrapDiv::new_from_id(&id_title), location_text: WrapHeading::new_from_id(&id_location), balance_text: WrapDiv::new_from_id(&id_balance), menu_defend: CombatArmySelect {
                 main: WrapDiv::new_from_id(&id_main.1),
@@ -88,7 +89,8 @@ impl StatefullView<StateCombat> for ViewCombat {
                 select: WrapSelect::new_from_id(&id_select.0),
                 player_text: WrapDiv::new_from_id(&id_player_text.0),
                 btn_next: WrapBtn::new_from_id(&id_btn.0),
-            }, template, }
+            }, btn_retreat:WrapBtn::new_from_id(&id_retreat),
+            template, }
     }
 
     fn mount(&mut self) {
@@ -102,8 +104,8 @@ impl StatefullView<StateCombat> for ViewCombat {
     }
 
     fn update_self(&mut self) {
-        self.location_text.set_text(format!("Attack in {}", self.state.attack_location));
-        self.balance_text.set_text(format!("Defenders {}:{} Attackers",
+        self.location_text.set_text(&format!("Attack in {}", self.state.attack_location));
+        self.balance_text.set_text(&format!("Defenders {}:{} Attackers",
                                            self.state.armies_defending, self.state.armies_attacking));
 
         let set_visibilty_child = |elem: &WrapSelect, idx: u32, visible: bool| {
@@ -114,18 +116,25 @@ impl StatefullView<StateCombat> for ViewCombat {
 
         let handle_combat_view = |view: &mut CombatArmySelect, player: &u32, armies: u32,
                                   is_attacker: bool| {
-            view.player_text.set_text(format!("Player {}", player + 1));
+            view.player_text.set_text(&format!("Player {}", player + 1));
             if armies > 2 && is_attacker {
-                log!(format!("attacker and > 2 is attack {} armies {}",is_attacker, armies));
+                //log!(format!("attacker and > 2 is attack {} armies {}",is_attacker, armies));
                 set_visibilty_child(&view.select, 1, true);
                 set_visibilty_child(&view.select, 2, true);
                 return;
             } else if armies > 1 {
-                log!(format!("armies > 1 is attack {} armies {}",is_attacker, armies));
+                //log!(format!("armies > 1 is attack {} armies {}",is_attacker, armies));
+                if view.select.get_value() == "3"{
+                    view.select.set_value("2")
+                }
                 set_visibilty_child(&view.select, 1, true);
                 set_visibilty_child(&view.select, 2, false);
             } else {
-                log!(format!("1 army is attack {} armies {}",is_attacker, armies));
+                let val = view.select.get_value();
+                if val == "3" || val == "2"{
+                    view.select.set_value("1")
+                }
+                //log!(format!("1 army is attack {} armies {}",is_attacker, armies));
                 set_visibilty_child(&view.select, 1, false);
                 set_visibilty_child(&view.select, 2, false);
             }
@@ -162,8 +171,14 @@ impl StatefullView<StateCombat> for ViewCombat {
 
         let ref_defend = game_ref.clone();
         self.menu_defend.btn_next.set_click_handler(Box::from(move |_| {
-            borrow_game_safe(&ref_defend,"attack btn".to_string(),
+            borrow_game_safe(&ref_defend,"defend btn".to_string(),
                              |mut g| g.handle_ui_combat_roll(false))
+        }));
+
+        let ref_retreat = game_ref.clone();
+        self.btn_retreat.set_click_handler(Box::from(move |_| {
+            borrow_game_safe(&ref_retreat,"retreat btn".to_string(),
+                             |mut g| g.handle_ui_retreat())
         }));
     }
 }

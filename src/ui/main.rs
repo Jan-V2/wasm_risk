@@ -44,7 +44,7 @@ pub struct UiMainProps {
 #[component]
 pub fn UiSide<G: Html>(props: UiMainProps) -> View<G> {
     let ui_info_struct = UiInfo::new();
-    props.game_ref.get_clone().borrow_mut().set_ui_info(ui_info_struct.clone());
+    props.game_ref.get_clone().borrow_mut().set_config_sig(ui_info_struct.clone());
     let ui_state_sig = ui_info_struct.ui_state.clone();
 
     let arg_ref = props.game_ref.clone();
@@ -56,7 +56,6 @@ pub fn UiSide<G: Html>(props: UiMainProps) -> View<G> {
             view!{
                 PlayersSetup(game_ref=arg_ref.get_clone(), ui_state=ui_state_sig)
             }
-
         }else{
             view!{
                 div { }

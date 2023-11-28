@@ -12,3 +12,4 @@ pub mod view_army_place;
 pub mod view_dice_roll;
 pub mod view_turn;
 pub mod view_game_end;
+pub mod view_info;

@@ -26,11 +26,15 @@ impl StatefullView<StateTurn> for ViewTurn {
     fn create(doc: &Document) -> Self {
         let id_label = get_random_id();
         let id_btn_next_turn = get_random_id();
-        let template = WrapHtml::new(doc, "turn_start".to_string(), template_turn_menu(
+        let template = WrapHtml::new(doc, "turn_start".to_string(),
+                                     template_turn_menu(
             &id_label, &id_btn_next_turn,
         ).as_str());
         template.mount();
-        let mut ret = ViewTurn { template, label_player: WrapDiv::new_from_id(&id_label), btn_next_turn: WrapBtn::new_from_id(&id_btn_next_turn), state: StateTurn {
+        let mut ret = ViewTurn {
+            template,
+            label_player: WrapDiv::new_from_id(&id_label),
+            btn_next_turn: WrapBtn::new_from_id(&id_btn_next_turn), state: StateTurn {
                 active_player: 0,
                 can_reinforce: true,
             }, mounted: false, };
@@ -49,10 +53,16 @@ impl StatefullView<StateTurn> for ViewTurn {
 
     fn update(&mut self, state: StateTurn) {
         self.state = state;
+        self.update_self();
     }
 
     fn update_self(&mut self) {
-        self.label_player.set_text(format!("Player {}", self.state.active_player + 1));
+        self.label_player.set_text(&format!("Player {}", self.state.active_player + 1));
+        if self.state.can_reinforce{
+            self.btn_next_turn.set_text("Reinforce and end turn")
+        }else {
+            self.btn_next_turn.set_text("End turn")
+        }
     }
 
     fn get(&self) -> StateTurn {
