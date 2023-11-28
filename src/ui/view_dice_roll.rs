@@ -7,8 +7,7 @@ use web_sys::Document;
 use crate::canvas::{DiceFaceTex, get_dice_tex};
 use crate::game::Game;
 use crate::ui::templates::template_dice_roll;
-use crate::ui::traits::HTMLable;
-use crate::ui::wrap_elem::{WrapBtn, WrapDiceCanvas, WrapHtml};
+use crate::ui::wrap_elem::{WrapBtn, WrapDiceCanvas, WrapHtml, HTML_Div, HTMLable};
 
 
 pub struct ViewDiceRoll {

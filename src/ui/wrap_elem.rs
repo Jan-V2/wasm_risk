@@ -1,3 +1,4 @@
+#![allow(non_camel_case_types)]
 use std::cell::RefCell;
 use std::rc::Rc;
 use wasm_bindgen::{JsCast};
@@ -5,7 +6,29 @@ use web_sys::{CssStyleDeclaration, Document, HtmlButtonElement, HtmlCanvasElemen
 use crate::canvas::{clear_canvas, DiceFaceTex, draw_dice};
 use crate::element_getters::{create_new_elem, get_element_by_id, attach_handler_to_btn, get_T_from_id, get_drawing_context};
 use crate::model::Coord;
-use crate::ui::traits::*;
+
+
+
+pub trait HTMLable{
+    fn mount(&self);// -> result?
+    fn set_visibilty(&mut self, is_visible:bool);
+    fn new_from_id(id:&String)-> Self;
+}
+
+pub trait HTML_Div where Self:HTMLable {
+    fn new(document:&Document, id:String, text:String)-> Self;
+    fn set_text(&mut self, new_str:&String);
+    fn get_text(&self)->String;
+}
+
+pub trait HTML_Input<T> where Self:HTMLable {
+    fn get(&self) -> T;
+}
+
+pub trait HTML_Showable where Self:HTMLable {
+    fn set(&mut self, value:bool);
+    fn toggle(&mut self);
+}
 
 pub struct WrapHeading{
     elem:HtmlHeadingElement,

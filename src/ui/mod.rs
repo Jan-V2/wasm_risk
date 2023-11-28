@@ -3,7 +3,6 @@ pub mod main;
 pub mod army_placement;
 pub mod ui_state_manager;
 mod templates;
-pub mod traits;
 pub mod wrap_elem;
 pub mod view_turn_start;
 pub mod view_combat;

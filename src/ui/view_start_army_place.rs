@@ -3,9 +3,8 @@ use std::rc::Rc;
 use web_sys::Document;
 use crate::game::Game;
 use crate::ui::templates::template_start_army_placement;
-use crate::ui::traits::{HTML_Div, HTMLable};
 use crate::ui::ui_state_manager::{get_random_id, StatefullView};
-use crate::ui::wrap_elem::{WrapDiv, WrapHtml};
+use crate::ui::wrap_elem::{WrapDiv, WrapHtml, HTML_Div, HTMLable};
 
 
 #[derive(Clone, Default, Debug)]

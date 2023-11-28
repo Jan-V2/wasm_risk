@@ -1,5 +1,4 @@
-use crate::ui::traits::{HTML_Div, HTMLable};
-use crate::ui::wrap_elem::WrapDiv;
+use crate::ui::wrap_elem::{WrapDiv, HTML_Div, HTMLable};
 use gloo_timers::callback::Timeout;
 
 pub struct ViewInfo{
