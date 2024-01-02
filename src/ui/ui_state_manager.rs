@@ -10,6 +10,7 @@ use crate::ui::view_combat::ViewCombat;
 use crate::ui::view_dice_roll::ViewDiceRoll;
 use crate::ui::view_start_army_place::ViewStartArmyPlacement;
 use gloo::console::log as console_log;
+use crate::ui::view_label::ViewLabel;
 use crate::ui::view_turn::ViewTurn;
 
 
@@ -51,6 +52,7 @@ pub struct UiStateManager {
     pub selected: SelectedView,
     pub combat: ViewCombat,
     pub dice_rolls: ViewDiceRoll,
+    pub view_label:ViewLabel,
     pub info_div: WrapDiv,
 }
 
@@ -64,6 +66,7 @@ impl UiStateManager {
             selected: SelectedView::TurnMenu,
             combat: ViewCombat::create(&doc),
             dice_rolls: ViewDiceRoll::create(&doc),
+            view_label: ViewLabel::create(&doc),
             info_div: WrapDiv::new_from_id(&"info".to_string()),
         }
     }
@@ -74,6 +77,7 @@ impl UiStateManager {
         self.army_placement.mount();
         self.combat.mount();
         self.dice_rolls.mount();
+        self.view_label.mount();
         self.hide_all();
     }
 
@@ -83,10 +87,12 @@ impl UiStateManager {
         self.army_placement.update_self();
         self.combat.update_self();
         self.dice_rolls.update_self();
+        self.view_label.mount();
     }
 
     pub fn select_view(&mut self, view: &UiState) {
         self.hide_all();
+        console_log!(format!("selecting {:?}", view));
         match view {
             UiState::ARMY_PLACEMENT_START => { self.start_army_placement.show() }
             UiState::ARMY_PLACEMENT => { self.army_placement.show() }
@@ -95,7 +101,9 @@ impl UiStateManager {
             UiState::DICE_ROLL => { self.dice_rolls.show() }
             UiState::GAME_END => { todo!() }
             UiState::CARD_SELECT => { todo!() }
-            _ => {}
+            UiState::SETUP => {}// don't show a view
+            UiState::MOVE => {todo!()}
+            UiState::LABEL => {self.view_label.show();}
         }
         self.update_all()
     }
@@ -106,6 +114,7 @@ impl UiStateManager {
         self.army_placement.hide();
         self.combat.hide();
         self.dice_rolls.hide();
+        self.view_label.hide();
     }
 
     pub fn set_handlers(&mut self, game_ref: &Rc<RefCell<Game>>) {
@@ -114,6 +123,7 @@ impl UiStateManager {
         self.army_placement.set_handlers(game_ref);
         self.combat.set_handlers(game_ref);
         self.dice_rolls.set_handlers(game_ref);
+        self.view_label.set_handlers(game_ref);
     }
 }
 

@@ -1,0 +1,6 @@
+[submodule "libs/libs/marble_wasm"]
+	path = libs/libs/marble_wasm
+	url = https://github.com/Jan-V2/marble_wasm.git
+[submodule "libs/marble_wasm"]
+	path = libs/marble_wasm
+	url = https://github.com/Jan-V2/marble_wasm.git

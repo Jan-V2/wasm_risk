@@ -5,6 +5,8 @@ use crate::ui::ui_state_manager::{
      StatefullView, UiStateManager,
 };
 
+
+
 use crate::utils::funcs::rand_int;
 
 use gloo::console::log as console_log;
@@ -13,6 +15,7 @@ use std::cell::RefCell;
 use std::rc::Rc;
 use crate::ui::view_combat::StateCombat;
 use crate::ui::view_info::ViewInfo;
+use crate::ui::view_label::StateLabel;
 
 pub struct ProvLookupTable {
     pub pixels: Vec<[u8; 3]>,
@@ -171,6 +174,12 @@ impl Game {
         self.config_sig = Some(info);
     }
 
+    pub fn show_label(&mut self, label:String, next_state:UiState){
+        self.ui_man.view_label.update(StateLabel{
+            label_text: label, return_state:  next_state.clone()});
+        self.set_ui_state(UiState::LABEL);
+    }
+
     pub(super) fn set_ui_state(&mut self, state: UiState) {
         self.state_turn.attack_target = None;
         self.ui_man.select_view(&state);
@@ -180,7 +189,8 @@ impl Game {
                 "".to_string())}
             UiState::ARMY_PLACEMENT | UiState::ARMY_PLACEMENT_START => {self.info_display_div.set_default(
                 "Click on your own provinces to place your armies".to_string())}
-            UiState::TURN => {self.info_display_div.set_default(
+            UiState::TURN => {
+                self.info_display_div.set_default(
                 "Click on your own province to attack from there, or press end turn".to_string())}
             UiState::MOVE => {todo!()}
             UiState::COMBAT => {self.info_display_div.set_default(
@@ -190,6 +200,9 @@ impl Game {
             UiState::GAME_END => {self.info_display_div.set_default(
                 "Game Over".to_string())}
             UiState::CARD_SELECT => {todo!()}
+            UiState::LABEL => {
+                self.info_display_div.set_default("".to_string())
+            }
         }
     }
 

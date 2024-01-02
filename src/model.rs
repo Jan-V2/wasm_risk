@@ -4,6 +4,8 @@ use queues::{IsQueue, Queue};
 use serde::{Deserialize, Serialize};
 use crate::data_include::{ get_map_data, get_navtree_data};
 use gloo::console::log as console_log;
+use strum::IntoEnumIterator;
+use strum_macros::EnumIter;
 
 
 pub struct Model{
@@ -78,6 +80,23 @@ impl Model{
             }
         }
         return ret;
+    }
+
+    pub fn get_player_continent_armies(&self, player_id:&u32) -> u32 {
+        let mut acc = 0;
+        let mut found_continents:Vec<_> = Continent::iter().collect();
+        for prov in &self.provinces{
+            if &prov.owner_id != player_id{
+                let found_idx_opt = found_continents.iter().position(|c| c == &prov.continent);
+                if found_idx_opt.is_some(){
+                    let _ = found_continents.remove(found_idx_opt.unwrap());
+                }
+            }
+        }
+        for c in found_continents{
+            acc += c.get_armies();
+        }
+        return acc;
     }
 }
 
@@ -211,7 +230,7 @@ impl fmt::Display for Coord{
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, EnumIter, PartialEq, Eq)]
 pub enum Continent {
     Africa,
     SAmerica,
@@ -232,9 +251,20 @@ impl fmt::Display for Continent{
             Continent::Australia => write!(f, "Australia"),
         }
     }
-
 }
 
+impl Continent{
+    pub fn get_armies(&self)->u32{
+        match self {
+            Continent::Africa => {3}
+            Continent::SAmerica => {2}
+            Continent::NAmerica => {5}
+            Continent::Europe => {5}
+            Continent::Asia => {7}
+            Continent::Australia => {2}
+        }
+    }
+}
 
 
 #[derive(Debug, Serialize, Deserialize, Clone)]

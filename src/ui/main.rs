@@ -6,17 +6,19 @@ use crate::ui::player_setup::*;
 
 
 #[allow(non_camel_case_types)]
-#[derive(PartialEq, Copy, Clone, Debug)]
+#[derive(PartialEq, Copy, Clone, Debug, Default)]
 pub enum UiState {
     SETUP,
     ARMY_PLACEMENT_START,
     ARMY_PLACEMENT,
+    #[default]
     TURN,
     MOVE,
     COMBAT,
     DICE_ROLL,
     GAME_END,
     CARD_SELECT,
+    LABEL,
 
 }
 

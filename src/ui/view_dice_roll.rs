@@ -7,7 +7,7 @@ use web_sys::Document;
 use crate::canvas::{DiceFaceTex, get_dice_tex};
 use crate::game::Game;
 use crate::ui::templates::template_dice_roll;
-use crate::ui::wrap_elem::{WrapBtn, WrapDiceCanvas, WrapHtml, HTML_Div, HTMLable};
+use crate::ui::wrap_elem::{WrapBtn, WrapDiceCanvas, WrapHtml, HTMLable};
 
 
 pub struct ViewDiceRoll {
@@ -37,7 +37,6 @@ impl StatefullView<CombatResult> for ViewDiceRoll {
     }
 
     fn mount(&mut self) {
-        self.template.set_visibilty(false);
     }
 
     fn update(&mut self, state: CombatResult) {

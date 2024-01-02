@@ -26,7 +26,11 @@ wasm-bindgen-futures = "0.4.38"
 futures = "0.3.28"
 html-builder = "0.5.1"
 gloo-timers = "0.3.0"
+strum = { version = "0.25.0", features = ["derive"] }
+strum_macros = "0.25.3"
 
+[dependencies.marble]
+path = "libs/marble_wasm"
 
 [dependencies.web-sys]
 version = "0.3.4"

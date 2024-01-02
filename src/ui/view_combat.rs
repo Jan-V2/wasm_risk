@@ -93,8 +93,7 @@ impl StatefullView<StateCombat> for ViewCombat {
     }
 
     fn mount(&mut self) {
-        self.template.set_visibilty(false);
-        //todo set btn next
+
     }
 
     fn update(&mut self, state: StateCombat) {

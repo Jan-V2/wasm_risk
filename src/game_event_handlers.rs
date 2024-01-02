@@ -7,6 +7,7 @@ use crate::ui::view_army_place::StateArmyPlacement;
 use crate::ui::view_combat::StateCombat;
 use crate::ui::view_turn::StateTurn;
 
+
 const DISPLAY_TIMEOUT_DEFAULT_MS: u32 = 2000;
 
 impl Game {
@@ -36,9 +37,18 @@ impl Game {
                 UiState::CARD_SELECT => { self.handle_canvas_noop(UiState::CARD_SELECT) }
                 UiState::DICE_ROLL => { self.handle_canvas_noop(UiState::DICE_ROLL) }
                 UiState::MOVE => { self.handle_canvas_move(prov_id) }
+                UiState::LABEL => {self.handle_canvas_noop(UiState::LABEL)}
             }
         }
     }
+
+    pub fn handle_label_next(&mut self){
+        let next_state = self.ui_man.view_label.get();
+        self.log(format!("handleing label, setting state to {:?}", next_state.return_state));
+        self.set_ui_state(next_state.return_state)
+    }
+
+
 
     fn handle_canvas_turn(&mut self, prov_id: u32) {
         if self.is_owned_by_active(&prov_id) {
@@ -99,6 +109,26 @@ impl Game {
             self.display_default_ms(&format!("Please select a province you own."));
         }
         self.log("turn".to_string())
+    }
+
+    pub fn handle_start_turn(&mut self){
+        // check if a player owns a continent
+        console_log!("handle start turn");
+        let player = self.get_active_player();
+        let extra_armies = self.model.get_player_continent_armies(&player);
+
+        if extra_armies > 0{
+            self.show_label(
+                format!("you get to place {extra_armies} extra armies, because you control continents."),
+                UiState::ARMY_PLACEMENT);
+            self.ui_man.army_placement.update(StateArmyPlacement{
+                armies: extra_armies,
+                active_player: player,
+                end_turn_placement: false,
+            });
+            self.set_ui_state(UiState::LABEL);
+        }
+
     }
 
     fn handle_canvas_army_placement(&mut self, prov_id: u32, placement_start: bool) {
@@ -204,7 +234,6 @@ impl Game {
 
 
     pub fn handle_ui_combat_roll(&mut self, is_attack: bool) {
-        //todo retreat button
         self.log("combat ui handle".to_string());
         let mut state = self.ui_man.combat.get();
         if is_attack {

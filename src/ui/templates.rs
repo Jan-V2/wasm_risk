@@ -15,6 +15,14 @@ pub fn template_army_placement(id_label_count:&String)->String{
 "#)
 }
 
+pub fn  template_label(id_label:&String, id_btn_next:&String)->String{
+    let mut buf = Buffer::new();
+    let mut main = buf.div().attr(fmt_id(id_label).as_str());
+    main.div();
+    let _ = writeln!(main.button().attr(fmt_id(id_btn_next).as_str()), "next");
+    buf.finish()
+}
+
 pub fn template_turn_menu(player_label:&String, btn_next_turn:&String)->String{
 
     let mut buf = Buffer::new();
