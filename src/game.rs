@@ -5,8 +5,6 @@ use crate::ui::ui_state_manager::{
      StatefullView, UiStateManager,
 };
 
-
-
 use crate::utils::funcs::rand_int;
 
 use gloo::console::log as console_log;
@@ -16,6 +14,13 @@ use std::rc::Rc;
 use crate::ui::view_combat::StateCombat;
 use crate::ui::view_info::ViewInfo;
 use crate::ui::view_label::StateLabel;
+use crate::views::turn::ViewTurn;
+
+
+pub enum Views {
+    TurnStart(Rc<RefCell<ViewTurn>>)
+}
+
 
 pub struct ProvLookupTable {
     pub pixels: Vec<[u8; 3]>,

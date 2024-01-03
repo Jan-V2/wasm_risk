@@ -190,7 +190,7 @@ impl Game {
         self.draw_board();
     }
 
-    pub fn handle_canvas_move(&mut self, prov_id: u32) {
+    pub fn handle_canvas_move(&mut self, _prov_id: u32) {
         todo!()
     }
 
