@@ -1,9 +1,11 @@
 use std::cell::{RefCell, RefMut};
 use std::rc::Rc;
 use marble::impl_visibility;
-use marble::wrap::{WrpDiv, WrpBtn,  Div, Button};
-use marble::traits::{Inline, View, Visibilty};
+use marble::wrap::{*};
+use marble::traits::{*};
 use crate::game::Game;
+use gloo::console::log as console_log;
+
 
 pub struct ViewTurn {
     head:WrpDiv,
@@ -28,6 +30,8 @@ impl View for ViewTurn {
 impl_visibility!(ViewTurn);
 
 pub fn create_view_turn(glob: Rc<RefCell<Game>>, mount_id:&str) -> Rc<RefCell<ViewTurn>>{
+    console_log!("creating turn view");
+
     let mut player_label= Div();
     let mut btn_next =  Button();
 

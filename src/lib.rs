@@ -1,4 +1,6 @@
 #![allow(dead_code)]
+//#![allow(unused_imports)]
+
 mod element_getters;
 mod canvas;
 mod model;
@@ -31,13 +33,11 @@ fn setup() {
     refc_game.borrow_mut().set_self_ref(ref2);
     canvas::ui_init_canvas(refc_game.clone());
 
-
     let cloj = || {
         ui::main::UiSide(UiMainProps {
             game_ref: create_signal(refc_game)
         })
     };
     sycamore::render_to(cloj, &get_element_by_id("main"));
-
 
 }

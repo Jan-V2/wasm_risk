@@ -1,10 +1,12 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 use marble::impl_visibility;
-use marble::wrap::{Div,  WrpDiv, };
-use marble::traits::{Visibilty, View, Inline};
+use marble::wrap::{*};
+use marble::traits::{*};
 use crate::build_constructor;
 use crate::game::Game;
+use gloo::console::log as console_log;
+
 
 pub struct ViewArmyPlacement{
     head: WrpDiv,
@@ -23,6 +25,8 @@ impl View for ViewArmyPlacement{
 impl_visibility!(ViewArmyPlacement);
 
 fn create_view_army_placement(_: Rc<RefCell<Game>>, mount_id:&str) -> ViewArmyPlacement{
+    console_log!("creating army placement view");
+
     let mut count_label = Div();
 
     let head = Div().child(

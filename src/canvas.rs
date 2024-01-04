@@ -188,7 +188,6 @@ pub fn draw_dice( context:CanvasRenderingContext2d, dice:&DiceFaceTex, location:
                                                                size as f64, size as f64);
 }
 
-
 pub fn get_dice_tex() -> Rc<RefCell<Vec<DiceFaceTex>>>{
     let canvas = get_canvas("canvas");
     let context = get_drawing_context(&canvas);

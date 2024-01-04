@@ -2,12 +2,12 @@ use std::cell::{RefCell, RefMut};
 use std::rc::Rc;
 use wasm_bindgen::JsCast;
 use marble::impl_visibility;
-use marble::wrap::{Div, WrpDiv, WrpBtn, Button, WrpOption, WrpSelect, OptionElem, Select, WrpLabel, Label, H3, WrpH3, chk_set_visbility};
-use marble::traits::{Visibilty, View, Inline};
+use marble::wrap::{*};
+use marble::traits::{*};
 use crate::game::Game;
-use web_sys::{HtmlOptionElement, Node};
-
-
+use web_sys::{HtmlOptionElement};
+use gloo::console::log as console_log;
+use crate::utils::structs::AttackDefendPair;
 
 pub struct CombatArmySelect {
     head: WrpDiv,
@@ -64,11 +64,6 @@ impl CombatArmySelect {
 impl_visibility!(CombatArmySelect);
 
 
-#[derive(Default)]
-pub struct AttackDefendPair<T> {
-    attack: T,
-    defend: T,
-}
 
 pub struct ViewCombat {
     head: WrpDiv,
@@ -91,7 +86,8 @@ impl View for ViewCombat{
         self.balance_text.inline_txt(&format!("Defenders {}:{} Attackers",
                                             self.armies.defend, self.armies.attack));
         let update_side = |submenu:&CombatArmySelect, is_attacker:bool,
-        armies:u32, player_id:u32, prov_id:u32, is_visible:bool|{
+        armies:u32, player_id:u32, is_visible:bool|{
+            //todo maybe this should happen inside the nested view
             if is_visible{
                 submenu.show();
             }else {
@@ -122,15 +118,16 @@ impl View for ViewCombat{
             }
         };
         update_side(&self.submenus.attack, true, self.armies.attack,
-            self.player_ids.attack, self.prov_ids.attack, self.are_visible.attack);
+            self.player_ids.attack, self.are_visible.attack);
         update_side(&self.submenus.defend, true, self.armies.defend,
-                    self.player_ids.defend, self.prov_ids.defend, self.are_visible.defend)
+                    self.player_ids.defend, self.are_visible.defend)
     }
 }
 
 impl_visibility!(ViewCombat);
 
 pub fn create_view_combat(game: Rc<RefCell<Game>>, mount_id: &str) -> Rc<RefCell<ViewCombat>> {
+    console_log!("creating combat view");
     let mut title = H3();
     let mut balance_text = Div();
     let mut retreat_btn = Button();
@@ -139,12 +136,12 @@ pub fn create_view_combat(game: Rc<RefCell<Game>>, mount_id: &str) -> Rc<RefCell
         defend: CombatArmySelect::new(),
     };
 
-    let mut head = Div().child(
+    let head = Div().child(
         title.get_clone()
     ).children(vec![
         balance_text.get_clone().style("margin-bottom: 15px;"),
         submenus.attack.get_html(Some(retreat_btn.get_clone())),
-        submenus.attack.get_html(None),
+        submenus.defend.get_html(None),
     ]).mount(mount_id);
 
     let view_combat = ViewCombat{
@@ -163,18 +160,21 @@ pub fn create_view_combat(game: Rc<RefCell<Game>>, mount_id: &str) -> Rc<RefCell
     let rc_view = Rc::new(RefCell::new(view_combat));
 
     rc_view.borrow_mut().submenus.attack.btn_next.set_state_handler(rc_view.clone(),
+        #[allow(unused_mut)]
         |mut s:RefMut<ViewCombat>|{
             s.game_ref.borrow_mut().handle_ui_combat_roll(true);
         }, "attack btn"
     );
 
     rc_view.borrow_mut().submenus.defend.btn_next.set_state_handler(rc_view.clone(),
+        #[allow(unused_mut)]
         |mut s:RefMut<ViewCombat>|{
             s.game_ref.borrow_mut().handle_ui_combat_roll(false);
         }, "defend btn"
     );
 
     rc_view.borrow_mut().retreat_btn.set_state_handler(rc_view.clone(),
+        #[allow(unused_mut)]
        |mut s:RefMut<ViewCombat>|{
            s.game_ref.borrow_mut().handle_ui_retreat();
        }, "retreat btn"

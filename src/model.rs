@@ -7,7 +7,7 @@ use gloo::console::log as console_log;
 use strum::IntoEnumIterator;
 use strum_macros::EnumIter;
 
-
+//todo refactor this file
 pub struct Model{
     pub provinces:Vec<Province>,
     pub nav_tree:NavTree,
@@ -253,7 +253,7 @@ impl fmt::Display for Continent{
     }
 }
 
-impl Continent{
+impl Continent{//todo move this to rules?
     pub fn get_armies(&self)->u32{
         match self {
             Continent::Africa => {3}
@@ -453,8 +453,6 @@ impl NavTree {
         None
     }
 }
-
-
 
 #[derive(Debug)]
 pub struct Player{

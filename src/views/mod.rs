@@ -3,7 +3,9 @@ extern crate marble;
 pub mod turn;
 pub mod army_placement;
 pub mod main;
-mod combat;
+pub mod combat;
+pub mod info;
+pub mod dice_roll;
 
 
 #[macro_export] //todo make this derive
