@@ -1,12 +1,8 @@
 use crate::model::{Coord, Model, Player, Rules};
 use crate::ui::main::{UiInfo, UiState};
 use crate::ui::player_setup::PlayerConfig;
-use crate::ui::ui_state_manager::{
-     StatefullView, UiStateManager,
-};
-
+use crate::ui::ui_state_manager::{StatefullView, UiStateManager, };
 use crate::utils::funcs::rand_int;
-
 use gloo::console::log as console_log;
 use js_sys::Math::sqrt;
 use std::cell::RefCell;
@@ -16,6 +12,18 @@ use crate::ui::view_info::ViewInfo;
 use crate::ui::view_label::StateLabel;
 use crate::views::turn::ViewTurn;
 
+
+/*
+todo start placement:
+run placement with special flag.
+depending on flag handeler changes
+handeler handels single placement or start
+todo "return register" for acessing views nested
+have a stack of previous menues
+todo have generic handler for stack return
+this could be used by when selecting cards
+todo should .update omit &mut or should .show require &mut
+*/
 
 pub enum Views {
     TurnStart(Rc<RefCell<ViewTurn>>)
@@ -282,13 +290,15 @@ impl Game {
             Rules::armies_per_players_start(config.player_count as u32).unwrap();
         self.assign_provs_random();
 
-        let provs = &self.model.provinces;
+        /*
         let mut count_id = vec![0u32; config.player_count as usize];
         for prov in provs {
             count_id[prov.owner_id as usize] += 1;
         }
         self.log(format!("provinces per player {:?}", count_id));
+        */
 
+        let provs = &self.model.provinces;
         let mut state = self.ui_man.start_army_placement.get();
         state.num_players = config.player_count as u32;
 

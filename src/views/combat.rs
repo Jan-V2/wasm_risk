@@ -1,7 +1,7 @@
 use std::cell::{RefCell, RefMut};
 use std::rc::Rc;
 use wasm_bindgen::JsCast;
-use marble::impl_visibility;
+use marble::{impl_visibility, impl_visibility_no_update};
 use marble::wrap::{*};
 use marble::traits::{*};
 use crate::game::Game;
@@ -61,9 +61,7 @@ impl CombatArmySelect {
     }
 }
 
-impl_visibility!(CombatArmySelect);
-
-
+impl_visibility_no_update!(CombatArmySelect);
 
 pub struct ViewCombat {
     head: WrpDiv,
