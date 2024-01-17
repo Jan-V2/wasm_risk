@@ -59,6 +59,11 @@ impl CombatArmySelect {
 
         return self.head.get_clone();
     }
+
+    pub fn get_armies_selected(&self)->u32{
+        let val_str = self.select.get_value();
+        val_str.parse().unwrap()
+    }
 }
 
 impl_visibility_no_update!(CombatArmySelect);
@@ -69,13 +74,13 @@ pub struct ViewCombat {
     title: WrpH3,
     balance_text: WrpDiv,
     retreat_btn:WrpBtn,
-    submenus: AttackDefendPair<CombatArmySelect>,
+    pub submenus: AttackDefendPair<CombatArmySelect>,
 
     pub attack_location: String,// todo is this needed?
     pub armies: AttackDefendPair<u32>,
     pub player_ids: AttackDefendPair<u32>,
     pub prov_ids: AttackDefendPair<u32>,
-    pub are_visible: AttackDefendPair<bool>,
+    pub is_visible: AttackDefendPair<bool>,
 }
 
 impl View for ViewCombat{
@@ -116,9 +121,9 @@ impl View for ViewCombat{
             }
         };
         update_side(&self.submenus.attack, true, self.armies.attack,
-            self.player_ids.attack, self.are_visible.attack);
+            self.player_ids.attack, self.is_visible.attack);
         update_side(&self.submenus.defend, true, self.armies.defend,
-                    self.player_ids.defend, self.are_visible.defend)
+                    self.player_ids.defend, self.is_visible.defend)
     }
 }
 
@@ -153,7 +158,7 @@ pub fn create_view_combat(game: Rc<RefCell<Game>>, mount_id: &str) -> Rc<RefCell
         armies: AttackDefendPair::default(),
         player_ids: AttackDefendPair::default(),
         prov_ids: AttackDefendPair::default(),
-        are_visible: AttackDefendPair::default(),
+        is_visible: AttackDefendPair::default(),
     };
     let rc_view = Rc::new(RefCell::new(view_combat));
 

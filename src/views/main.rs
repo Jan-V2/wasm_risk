@@ -11,7 +11,7 @@ use crate::views::combat::{create_view_combat, ViewCombat};
 use gloo::console::log as console_log;
 use crate::views::dice_roll::{create_view_dice_roll, ViewDiceRoll};
 
-#[derive(Default, EnumIter, Debug, PartialEq)]
+#[derive(Default, EnumIter, Debug, PartialEq, Clone)]
 pub enum ViewsEnum {
     #[default]
     Turn,
@@ -22,20 +22,20 @@ pub enum ViewsEnum {
 
 #[derive(Clone)]
 pub struct ViewsStruct{
-    turn:Rc<RefCell<ViewTurn>>,
-    army_placement:Rc<RefCell<ViewArmyPlacement>>,
-    combat:Rc<RefCell<ViewCombat>>,
-    dice_rolls:Rc<RefCell<ViewDiceRoll>>,
+    pub turn:Rc<RefCell<ViewTurn>>,
+    pub army_placement:Rc<RefCell<ViewArmyPlacement>>,
+    pub combat:Rc<RefCell<ViewCombat>>,
+    pub dice_rolls:Rc<RefCell<ViewDiceRoll>>,
 }
 
 
 pub struct ViewMain {
     head:WrpDiv,
-    views:ViewsStruct,
+    pub views:ViewsStruct,
     pub selected_view :ViewsEnum,
 }
 
-pub fn create_main_view(game: Rc<RefCell<Game>>, mount_id:&str) -> Rc<RefCell<ViewMain>>{
+pub fn create_view_main(game: Rc<RefCell<Game>>, mount_id:&str) -> Rc<RefCell<ViewMain>>{
     console_log!("creating main view");
 
     let mut mount_turn = Div();

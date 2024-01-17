@@ -6,6 +6,7 @@ use crate::data_include::{ get_map_data, get_navtree_data};
 use gloo::console::log as console_log;
 use strum::IntoEnumIterator;
 use strum_macros::EnumIter;
+use crate::utils::structs::AttackDefendPair;
 
 //todo refactor this file
 pub struct Model{
@@ -87,7 +88,8 @@ impl Model{
         let mut found_continents:Vec<_> = Continent::iter().collect();
         for prov in &self.provinces{
             if &prov.owner_id != player_id{
-                let found_idx_opt = found_continents.iter().position(|c| c == &prov.continent);
+                let found_idx_opt = found_continents.iter()
+                    .position(|c| c == &prov.continent);
                 if found_idx_opt.is_some(){
                     let _ = found_continents.remove(found_idx_opt.unwrap());
                 }
@@ -101,17 +103,40 @@ impl Model{
 }
 
 #[derive(Clone, Debug, Default)]
-pub struct CombatResult {
-    pub armies_attacker:u32,
-    pub armies_defender:u32,
-    pub losses_defender:u32,
-    pub losses_attacker:u32,
-    pub dice_roll_attacker:Vec<u32>,
-    pub dice_roll_defender :Vec<u32>,
-    pub has_rolled:bool,
-    pub combat_finished:bool,
-    pub active_defender: u32,
-    pub active_attacker: u32,
+pub struct CombatState { //todo move somewhere sensible
+    pub armies:AttackDefendPair<u32>,
+    pub losses:AttackDefendPair<u32>,
+    pub dice_rolls:AttackDefendPair<Vec<u32>>,
+    pub num_dice_used:AttackDefendPair<u32>,
+    pub prov_id:AttackDefendPair<u32>,
+    pub combat_ongoing:bool,
+}
+
+impl CombatState {
+    pub(crate) fn apply_losses(&mut self) {
+        self.armies.attack -= self.losses.attack;
+        self.armies.defend -= self.losses.defend;
+    }
+
+    pub(crate) fn get_remaining(&self)->AttackDefendPair<u32>{
+        AttackDefendPair{
+            attack: self.armies.attack - self.losses.attack,
+            defend: self.armies.defend - self.losses.defend,
+        }
+    }
+
+    pub(crate) fn attacker_has_won(&self)->bool{
+        let armies = self.get_remaining();
+        return if armies.attack > 1 && armies.defend == 0{
+            true
+        }else {
+            false
+        }
+    }
+
+    pub(crate) fn combat_can_continue(&self)->bool{
+        todo!()
+    }
 }
 
 pub struct CombatEngine{
@@ -122,11 +147,11 @@ impl CombatEngine{
         (js_sys::Math::random() * 5f64).round() as u32 +1
     }
 
-    pub fn next_round(&mut self, mut combat_data: CombatResult ) -> CombatResult {
+    pub fn next_round(&mut self, mut combat_data: CombatState) -> CombatState {
         assert!(
-            combat_data.combat_finished == false &&
-            combat_data.losses_defender == 0 &&
-            combat_data.losses_attacker == 0
+            combat_data.combat_ongoing == false &&
+            combat_data.losses.defend == 0 &&
+            combat_data.losses.attack == 0
         );
 
         let swap_indexes = |dice:&mut Vec<u32>, idx:usize|{
@@ -153,49 +178,50 @@ impl CombatEngine{
 
         let mut attacking_dice:Vec<u32> = vec![];
         let mut defending_dice:Vec<u32> = vec![];
-        for _ in 0..combat_data.active_attacker {
+        for _ in 0..combat_data.num_dice_used.attack {
             attacking_dice.push(self.roll_dice())
         }
         sort_dice(&mut attacking_dice);
-        for _ in 0..combat_data.active_defender{
+        for _ in 0..combat_data.num_dice_used.defend{
             defending_dice.push(self.roll_dice())
         }
         sort_dice(&mut defending_dice);
         
-        combat_data.dice_roll_attacker = attacking_dice;
-        combat_data.dice_roll_defender = defending_dice;
-        combat_data.has_rolled = true;
+        combat_data.dice_rolls.attack = attacking_dice;
+        combat_data.dice_rolls.defend = defending_dice;
 
         console_log!(format!("{:?}", combat_data));
-        let dice_min = if combat_data.active_attacker > combat_data.active_defender {
-            combat_data.active_defender as usize
+        let dice_min = if combat_data.num_dice_used.attack > combat_data.num_dice_used.defend {
+            combat_data.num_dice_used.defend as usize
         }else {
-            combat_data.active_attacker as usize
+            combat_data.num_dice_used.attack as usize
         };
 
         for i in 0..dice_min{
-            if combat_data.dice_roll_attacker[i] > combat_data.dice_roll_defender[i]{
-                combat_data.losses_defender += 1;
+            if combat_data.dice_rolls.attack[i] > combat_data.dice_rolls.defend[i]{
+                combat_data.losses.defend += 1;
             }else {
-                combat_data.losses_attacker += 1;
+                combat_data.losses.attack += 1;
             }
         }
 
-        let attacking_signed = combat_data.armies_attacker as i32 - combat_data.losses_attacker as i32 ;
+        let attacking_signed = combat_data.armies.attack as i32 -
+            combat_data.losses.attack as i32 ;
         if attacking_signed > -1{
-            combat_data.armies_attacker = attacking_signed as u32
+            combat_data.armies.attack = attacking_signed as u32
         }else {
-            combat_data.armies_attacker = 0;
+            combat_data.armies.attack = 0;
         }
-        let defending_signed = combat_data.armies_defender as i32 - combat_data.losses_defender as i32;
+        let defending_signed = combat_data.armies.defend as i32 -
+            combat_data.losses.defend as i32;
         if defending_signed > -1{
-            combat_data.armies_defender= defending_signed as u32
+            combat_data.armies.defend= defending_signed as u32
         }else {
-            combat_data.armies_defender = 0;
+            combat_data.armies.defend = 0;
         }
 
-        if combat_data.armies_attacker == 0 || combat_data.armies_defender == 0 {
-            combat_data.combat_finished = true;
+        if combat_data.armies.attack == 0 || combat_data.armies.defend == 0 {
+            combat_data.combat_ongoing = true;
         }
         combat_data    
     }

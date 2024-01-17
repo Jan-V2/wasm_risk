@@ -1,17 +1,21 @@
-use crate::model::{Coord, Model, Player, Rules};
+use crate::model::{CombatState, Coord, Model, Player, Rules};
 use crate::ui::main::{UiInfo, UiState};
 use crate::ui::player_setup::PlayerConfig;
 use crate::ui::ui_state_manager::{StatefullView, UiStateManager, };
 use crate::utils::funcs::rand_int;
 use gloo::console::log as console_log;
 use js_sys::Math::sqrt;
-use std::cell::RefCell;
+use std::cell::{RefCell, RefMut};
 use std::rc::Rc;
-use crate::ui::view_combat::StateCombat;
-use crate::ui::view_info::ViewInfo;
-use crate::ui::view_label::StateLabel;
+use crate::views::dice_roll::ViewDiceRoll;
+use crate::views::main::{create_view_main, ViewMain, ViewsEnum, ViewsStruct};
 use crate::views::turn::ViewTurn;
-
+ use paste::paste;
+use crate::views::army_placement::ViewArmyPlacement;
+use crate::views::combat::ViewCombat;
+use crate::views::info::ViewInfo;
+use stack_stack::{Stack, stack};
+use crate::utils::structs::AttackDefendPair;
 
 /*
 todo start placement:
@@ -24,10 +28,6 @@ todo have generic handler for stack return
 this could be used by when selecting cards
 todo should .update omit &mut or should .show require &mut
 */
-
-pub enum Views {
-    TurnStart(Rc<RefCell<ViewTurn>>)
-}
 
 
 pub struct ProvLookupTable {
@@ -69,8 +69,26 @@ impl ProvLookupTable {
 
 #[derive(Default)]
 pub struct GameTurnState {
-    pub(super) attack_target: Option<u32>,
+    pub(super) targets:AttackDefendPair<Option<u32>>,
+    pub(super) active_player:u32,
 }
+
+macro_rules! create_getter {
+    ($view_name:ident, $ty:ident) => {
+        paste!{
+        impl Game{
+            pub fn [<get_ $view_name>](&self)->Rc<RefCell<$ty>>{
+                self.views.as_ref().unwrap().$view_name.clone()
+            }
+        }
+        }
+    };
+}
+
+create_getter!(turn, ViewTurn);
+create_getter!(army_placement, ViewArmyPlacement);
+create_getter!(combat, ViewCombat);
+create_getter!(dice_rolls, ViewDiceRoll);
 
 pub struct Game {
     pub model: Model,
@@ -80,7 +98,53 @@ pub struct Game {
     pub logging: bool,
     pub state_turn: GameTurnState,
     pub ui_man: UiStateManager,
-    pub info_display_div: ViewInfo
+    pub info_display_div: ViewInfo,
+
+    pub view_main: Option<Rc<RefCell<ViewMain>>>,
+    pub info_view: Option<Rc<RefCell<ViewInfo>>>,
+    pub views:Option<ViewsStruct>,
+
+    pub menu_stack:Stack<ViewsEnum, 20>,// made big enough that it should never fill up
+    pub current_menu:ViewsEnum,
+    pub combat_state:CombatState,
+}
+
+
+pub struct Active_menu{
+    menu_stack:Stack<ViewsEnum, 20>,// made big enough that it should never fill up
+    current:ViewsEnum,
+}
+
+impl Active_menu{
+    pub fn get(&self)->ViewsEnum{
+        self.current.clone()
+    }
+
+    pub fn get_next(&mut self)->Option<ViewsEnum>{
+        if self.menu_stack.is_empty(){
+            return None;
+        }else{
+            return Some(self.menu_stack.as_slice().clone()[0].clone());
+        }
+    }
+
+    pub fn get_num_queued(&self)->u32{
+        self.menu_stack.len() as u32
+        ;
+    }
+
+    pub fn pop(&mut self)->ViewsEnum{
+        if self.menu_stack.is_empty(){
+            panic!("can't pop menu stack, stack empty. current menu {:?}", self.current)
+        }
+        self.current = self.menu_stack.pop().unwrap();
+        self.get()
+    }
+
+    pub fn push(&mut self, menu:ViewsEnum){
+        self.menu_stack.push(self.current.clone()).ok();
+        self.current = menu;
+    }
 }
 
 impl Game {
@@ -97,13 +161,22 @@ impl Game {
             ui_man: ui_state_man,
             info_display_div: ViewInfo::create(
                 &"text_out".to_string(), "setup".to_string()),
+            view_main: None,
+            info_view: None,
+            views: None,
+            menu_stack: Stack::with_capacity(),
+            current_menu: Default::default(),
+            combat_state: CombatState::default(),
         };
     }
 
+/*
     pub(super) fn apply_combat_result_to_map(&mut self, state_combat: &StateCombat) {
         self.log("combat finished handler".to_string());
-        let mut prov_attack = (*self.model.get_prov_from_id(&state_combat.prov_id_attacker).unwrap()).clone();
-        let mut prov_defend  = (*self.model.get_prov_from_id(&state_combat.prov_id_defender).unwrap()).clone();
+        let mut prov_attack = (*self.model.get_prov_from_id(
+            &state_combat.prov_id_attacker).unwrap()).clone();
+        let mut prov_defend  = (*self.model.get_prov_from_id(
+            &state_combat.prov_id_defender).unwrap()).clone();
 
         if state_combat.armies_defending == 0 && state_combat.armies_attacking > 0{
             // attacker won
@@ -122,7 +195,7 @@ impl Game {
         self.model.set_prov(prov_defend);
         self.draw_board();
     }
-
+*/
     pub fn handle_canvas_noop(&mut self, state :UiState){
         self.log(format!("in state: {:?} the canvas is not handled", state))
     }
@@ -141,6 +214,14 @@ impl Game {
             prov.army_count = 0;
         }
     }
+
+    pub(super) fn set_armies_in_prov(&mut self, num_armies: u32, prov_id: &u32) {
+        let prov = self.model
+            .get_prov_from_id_mut(prov_id)
+            .expect(format!("prov with id {} could not be found", prov_id).as_str());
+        prov.army_count = num_armies;
+    }
+
 
     pub(super) fn assign_provs_random(&mut self) {
         gloo::console::log!(format!("players len = {}", self.model.players.len()));
@@ -187,12 +268,13 @@ impl Game {
         self.config_sig = Some(info);
     }
 
-    pub fn show_label(&mut self, label:String, next_state:UiState){
-        self.ui_man.view_label.update(StateLabel{
+    pub fn show_label(&mut self, label:String){
+        // todo add view that just shows a label
+/*        self.ui_man.view_label.update(StateLabel{
             label_text: label, return_state:  next_state.clone()});
-        self.set_ui_state(UiState::LABEL);
+        self.set_ui_state(UiState::LABEL);*/
     }
-
+/*
     pub(super) fn set_ui_state(&mut self, state: UiState) {
         self.state_turn.attack_target = None;
         self.ui_man.select_view(&state);
@@ -200,7 +282,8 @@ impl Game {
         match state {
             UiState::SETUP => {self.info_display_div.set_default(
                 "".to_string())}
-            UiState::ARMY_PLACEMENT | UiState::ARMY_PLACEMENT_START => {self.info_display_div.set_default(
+            UiState::ARMY_PLACEMENT | UiState::ARMY_PLACEMENT_START => {
+            self.info_display_div.set_default(
                 "Click on your own provinces to place your armies".to_string())}
             UiState::TURN => {
                 self.info_display_div.set_default(
@@ -218,7 +301,26 @@ impl Game {
             }
         }
     }
+*/
+    
+    pub fn pop_menu(&mut self){
+        // todo set default display
+        // this assumption is that the data is already loaded into the menu,
+        // and only needs to be displayed
+        // this means the the previous state of the menu is restored
+        if self.menu_stack.is_empty(){
+            panic!("menu_stack is empty, can't set next menu")
+        }
+        self.current_menu = self.menu_stack.pop().unwrap();
+        self.get_view_main().borrow().set_active(self.current_menu.clone())
+    }
 
+    pub fn push_menu(&mut self, menu:ViewsEnum){
+        self.menu_stack.push(self.current_menu.clone()).unwrap();
+        self.current_menu = menu;
+        self.get_view_main().borrow().set_active(self.current_menu.clone());
+    }
+    
     pub fn lookup_coord(&self, clicked_coord: &Coord) -> Option<u32> {
         let mut found_at_idx: Vec<i32> = Vec::new();
 
@@ -264,13 +366,7 @@ impl Game {
         false
     }
 
-    pub fn set_active_player_signal(&mut self, active_player: u32) {
-        self.config_sig.unwrap().active_player.set(active_player)
-    }
 
-    pub fn get_active_player(&mut self) -> u32 {
-        self.config_sig.unwrap().active_player.get()
-    }
 
     pub fn set_player_config(&mut self, config: PlayerConfig) {
         gloo::console::log!(format!("player count = {}", config.player_count));
@@ -314,15 +410,44 @@ impl Game {
 
     pub fn get_prov_mouseover_string(&self, coord: &Coord) -> Option<String> {
         let prov_id = self.lookup_coord(coord);
-        if prov_id.is_some() {
-            return self.model.get_name_from_prov_id(&prov_id.unwrap());
+        return if prov_id.is_some() {
+            self.model.get_name_from_prov_id(&prov_id.unwrap())
         } else {
-            return None;
+            None
         }
     }
 
-    pub fn set_self_ref(&mut self, self_ref: Rc<RefCell<Game>>) {
-        self.ui_man.set_handlers(&self_ref)
+
+
+    pub fn create_views(&mut self, self_ref: Rc<RefCell<Game>>, mount_id:&str) {
+        self.view_main  = Some(create_view_main(self_ref.clone(), mount_id));
+        self.views = Some(self.get_view_main().borrow().views.clone());
+
     }
 
+
+    pub(super) fn get_view_dice(&self) -> Rc<RefCell<ViewDiceRoll>> {
+        return self.get_views().dice_rolls;
+    }
+
+
+    pub(super) fn get_views(&self)-> ViewsStruct{// todo create macro that does this automatically
+        let ret = self.views.as_ref();
+        if ret.is_none(){
+            panic!("can't access ViewsStruct , not set")
+        }
+        ret.unwrap().clone()
+    }
+
+    pub(super) fn get_view_main(&self)-> Rc<RefCell<ViewMain>>{
+        let ret = self.view_main.as_ref();
+        if ret.is_none(){
+            panic!("can't access main_view, not set")
+        }
+        ret.unwrap().clone()
+    }
+
+
 }
+
+

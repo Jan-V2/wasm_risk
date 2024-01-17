@@ -8,11 +8,11 @@ use crate::game::Game;
 use gloo::console::log as console_log;
 
 
+
 pub struct ViewArmyPlacement{
     head: WrpDiv,
     count_label: WrpDiv,
     pub armies: u32,
-    pub end_turn_placement:bool
 }
 
 impl View for ViewArmyPlacement{
@@ -37,7 +37,6 @@ fn create_view_army_placement(_: Rc<RefCell<Game>>, mount_id:&str) -> ViewArmyPl
         head,
         count_label,
         armies: 0,
-        end_turn_placement: false,
     };
 }
 

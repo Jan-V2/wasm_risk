@@ -21,12 +21,9 @@ pub struct ViewDiceRoll{
     canvas:AttackDefendPair<WrpCanvas>,
     dice_face_texes: Rc<RefCell<Vec<DiceFaceTex>>>,
     game_ref: Rc<RefCell<Game>>,
-    pub armies:AttackDefendPair<u32>,
     pub losses:AttackDefendPair<u32>,
     pub rolls:AttackDefendPair<Vec<u32>>,
-    pub active:AttackDefendPair<bool>,
-    pub has_rolled:bool,
-    pub combat_finished:bool
+    pub is_showing_dice:bool,
 }
 
 impl View for ViewDiceRoll{
@@ -69,12 +66,9 @@ pub fn create_view_dice_roll(game: Rc<RefCell<Game>>, mount_id: &str)
         canvas,
         dice_face_texes: get_dice_tex(),
         game_ref: game,
-        armies: Default::default(),
         losses: Default::default(),
         rolls: Default::default(),
-        active: Default::default(),
-        has_rolled: false,
-        combat_finished: false,
+        is_showing_dice: false,
     }));
 
     view.borrow().next_btn.set_state_handler( view.clone(),

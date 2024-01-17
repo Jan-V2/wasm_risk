@@ -30,7 +30,7 @@ fn setup() {
     let game = Game::new(get_map_lookup_data(50), true);
     let refc_game = Rc::from(RefCell::from(game));
     let ref2 = refc_game.clone();
-    refc_game.borrow_mut().set_self_ref(ref2);
+    refc_game.borrow_mut().create_views(ref2, "test2");
     canvas::ui_init_canvas(refc_game.clone());
 
     let cloj = || {
