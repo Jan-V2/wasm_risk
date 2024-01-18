@@ -6,6 +6,7 @@ pub mod main;
 pub mod combat;
 pub mod info;
 pub mod dice_roll;
+pub mod message;
 
 
 #[macro_export] //todo make this derive

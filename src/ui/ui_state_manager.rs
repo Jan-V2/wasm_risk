@@ -47,7 +47,6 @@ pub struct UiStateManager {
 
 impl UiStateManager {
     pub fn build() -> UiStateManager {
-        let doc = get_document();
         UiStateManager {
             selected: SelectedView::TurnMenu,
             info_div: WrapDiv::new_from_id(&"info".to_string()),
@@ -70,8 +69,6 @@ impl UiStateManager {
     pub fn hide_all(&mut self) {
     }
 
-    pub fn set_handlers(&mut self, game_ref: &Rc<RefCell<Game>>) {
-    }
 }
 
 

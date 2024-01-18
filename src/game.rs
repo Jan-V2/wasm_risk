@@ -132,7 +132,6 @@ pub struct Game {
     pub info_view: Rc<RefCell<ViewInfo>>,
     pub views:Option<ViewsStruct>,
     pub menu_stack:ActiveMenu,
-    pub current_menu:ViewsEnum,
     pub combat_state:CombatState,
 }
 
@@ -168,6 +167,9 @@ impl ActiveMenu {
     }
 
     pub fn pop(&mut self)->ViewsEnum{
+        // this assumption is that the data is already loaded into the menu,
+        // and only needs to be displayed
+        // this means the the previous state of the menu is restored
         if self.menu_stack.is_empty(){
             panic!("can't pop menu stack, stack empty. current menu {:?}", self.current)
         }
@@ -205,7 +207,6 @@ impl Game {
             info_view: create_view_info("text_out", "setup".to_string()),
             views: None,
             menu_stack: ActiveMenu::new(),
-            current_menu: Default::default(),
             combat_state: CombatState::default(),
         };
     }
@@ -308,8 +309,8 @@ impl Game {
         self.config_sig = Some(info);
     }
 
-    pub fn show_label(&mut self, label:String){
-        // todo add view that just shows a label
+    pub fn show_message(&mut self, _label:String){
+        // todo add view that just shows a message
 /*        self.ui_man.view_label.update(StateLabel{
             label_text: label, return_state:  next_state.clone()});
         self.set_ui_state(UiState::LABEL);*/
@@ -343,24 +344,17 @@ impl Game {
     }
 */
     
-    pub fn pop_menu(&mut self){
-        // todo set default display
-        // this assumption is that the data is already loaded into the menu,
-        // and only needs to be displayed
-        // this means the the previous state of the menu is restored
-        if self.menu_stack.is_empty(){
-            panic!("menu_stack is empty, can't set next menu")
-        }
-        self.current_menu = self.menu_stack.pop();
-        self.get_view_main().borrow().set_active(self.current_menu.clone())
+
+    pub fn push_and_activate_menu(&mut self, menu:ViewsEnum){
+        self.menu_stack.push(menu);
+        self.activate_current_menu();
     }
 
-    pub fn push_menu(&mut self, menu:ViewsEnum){
-        self.menu_stack.push(self.current_menu.clone());
-        self.current_menu = menu;
-        self.get_view_main().borrow().set_active(self.current_menu.clone());
+    pub fn activate_current_menu(&mut self){
+        self.get_view_main().borrow().set_active(self.menu_stack.get());
     }
-    
+
+
     pub fn lookup_coord(&self, clicked_coord: &Coord) -> Option<u32> {
         let mut found_at_idx: Vec<i32> = Vec::new();
 

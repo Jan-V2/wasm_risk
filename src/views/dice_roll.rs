@@ -34,6 +34,15 @@ impl View for ViewDiceRoll{
     }
 }
 
+impl ViewDiceRoll {
+    pub fn reset(&mut self, rolls:AttackDefendPair<Vec<u32>>,
+                 losses:AttackDefendPair<u32>){
+        self.rolls = rolls;
+        self.losses = losses;
+        self.is_showing_dice = false;
+    }
+}
+
 impl_visibility!(ViewDiceRoll);
 
 

@@ -38,85 +38,86 @@ impl Game {
                 ViewsEnum::ArmyPlacement => { self.handle_canvas_army_placement(prov_id) }
                 ViewsEnum::Combat => { self.handle_canvas_noop(ViewsEnum::Combat) }
                 ViewsEnum::DiceRolls => { self.handle_canvas_noop(ViewsEnum::DiceRolls) }
+                ViewsEnum::Message => {self.handle_canvas_noop(ViewsEnum::Message)}
             }
         }
     }
 
     fn handle_canvas_turn(&mut self, prov_id: u32) {
-        todo!()
-        /*        if self.is_owned_by_active(&prov_id) {
-                    let prov_name = self.model.get_prov_from_id(&prov_id).unwrap().name.clone();
-                    if self.model.get_prov_from_id(&prov_id).unwrap().army_count > 1{
-                        self.state_turn.targets.attack = Some(prov_id);
-                        self.display_default_ms(&format!("Attacking from {}", prov_name));
-                        return;
-                    }else {
-                        self.display_default_ms(&format!("Can't attack from {}. you need at least 2 armies", prov_name));
-                        return;
-                    }
-                }
+        if self.is_owned_by_active(&prov_id) {
+            let prov_name = self.model.get_prov_from_id(&prov_id).unwrap().name.clone();
+            if self.model.get_prov_from_id(&prov_id).unwrap().army_count > 1 {
+                self.state_turn.targets.attack = Some(prov_id);
+                self.display_default_ms(&format!("Attacking from {}", prov_name));
+                return;
+            } else {
+                self.display_default_ms(&format!(
+                    "Can't attack from {}. you need at least 2 armies", prov_name));
+                return;
+            }
+        }
 
-                if self.state_turn.targets.attack.is_some() {
-                    let id_attack_from = self.state_turn.targets.attack.as_ref().unwrap();
+        if self.state_turn.targets.attack.is_some() {
+            let id_attack_from = self.state_turn.targets.attack.as_ref().unwrap();
 
-                    let nav_res = self.model.nav_tree.navigate_adjacent(
-                        prov_id,
-                        self.state_turn.targets.attack.as_ref().unwrap().clone(),
-                    );
-                    if nav_res.is_some() {
-                        if nav_res.unwrap() {
-                            self.state_turn.targets.defend = Some(prov_id.clone());
+            let nav_res = self.model.nav_tree.navigate_adjacent(
+                prov_id,
+                self.state_turn.targets.attack.as_ref().unwrap().clone(),
+            );
+            if nav_res.is_some() {
+                if nav_res.unwrap() {
+                    self.state_turn.targets.defend = Some(prov_id.clone());
 
-                            self.push_menu(ViewsEnum::Combat);
-                            self.display_default_ms(&format!(
-                                "Attacking {}",
-                                self.model.get_name_from_prov_id(&prov_id).unwrap()
-                            ))
-                        } else {
-                            self.display_default_ms(&format!(
-                                "Can't attack {} no connection",
-                                self.model.get_name_from_prov_id(&prov_id).unwrap()
-                            ))
-                        }
-                    } else {
-                        self.display_default_ms(&format!(
-                            "Can't attack from {} to {}, no direct route.",
-                            self.model.get_name_from_prov_id(id_attack_from).unwrap(),
-                            self.model.get_name_from_prov_id(&prov_id).unwrap()
-                        ))
-                    }
+                    self.push_and_activate_menu(ViewsEnum::Combat);
+                    self.display_default_ms(&format!(
+                        "Attacking {}",
+                        self.model.get_name_from_prov_id(&prov_id).unwrap()
+                    ))
                 } else {
-                    self.display_default_ms(&format!("Please select a province you own."));
+                    self.display_default_ms(&format!(
+                        "Can't attack {} no connection",
+                        self.model.get_name_from_prov_id(&prov_id).unwrap()
+                    ))
                 }
-                self.log("turn".to_string())
-            */
+            } else {
+                self.display_default_ms(&format!(
+                    "Can't attack from {} to {}, no direct route.",
+                    self.model.get_name_from_prov_id(id_attack_from).unwrap(),
+                    self.model.get_name_from_prov_id(&prov_id).unwrap()
+                ))
+            }
+        } else {
+            self.display_default_ms(&format!("Please select a province you own."));
+        }
+        self.log("turn".to_string())
     }
 
-    pub fn handle_start_turn(&mut self) {
-        todo!();
-/*        // check if a player owns a continent
-        console_log!("handle start turn");
-        //self.state_turn.
-        let player = self.get_active_player();
-        let extra_armies = self.model.get_player_continent_armies(&player);
 
-        if extra_armies > 0 {
-            self.show_label(
-                format!("you get to place {extra_armies} \
-                extra armies, because you control continents."),
-                UiState::ARMY_PLACEMENT);
-            self.ui_man.army_placement.update(StateArmyPlacement {
-                armies: extra_armies,
-                active_player: player,
-                end_turn_placement: false,
-            });
-            self.set_ui_state(UiState::LABEL);
-        }*/
+    pub fn handle_start_turn(&mut self) {
+        todo!();//todo make a message appear before the army placement in next
+        // turn, and get rid of this method
+        /*        // check if a player owns a continent
+                console_log!("handle start turn");
+                //self.state_turn.
+                let player = self.get_active_player();
+                let extra_armies = self.model.get_player_continent_armies(&player);
+
+                if extra_armies > 0 {
+                    self.show_label(
+                        format!("you get to place {extra_armies} \
+                        extra armies, because you control continents."),
+                        UiState::ARMY_PLACEMENT);
+                    self.ui_man.army_placement.update(StateArmyPlacement {
+                        armies: extra_armies,
+                        active_player: player,
+                        end_turn_placement: false,
+                    });
+                    self.set_ui_state(UiState::LABEL);
+                }*/
     }
 
     fn handle_canvas_army_placement(&mut self, prov_id: u32) {
         // handles the canvas click event for amry placement, then pops the stack
-        //todo!();
         self.log("handling canvas army placement".to_string());
 
         if !self.is_owned_by_active(&prov_id) {
@@ -147,8 +148,8 @@ impl Game {
             }
         }
         self.draw_board();
-        if next_menu{
-            self.next_menu()
+        if next_menu {
+            self.pop_menu()
         }
     }
 
@@ -157,14 +158,14 @@ impl Game {
     }
 
 
-    pub fn army_placement_start_next(&mut self, from_setup:bool){
+    pub fn army_placement_start_next(&mut self, from_setup: bool) {
         self.log("in initial placement phase".to_string());
-        if self.state_turn.active_player == self.model.get_player_count() -1 {
+        if self.state_turn.active_player == self.model.get_player_count() - 1 {
             self.log("done full cycle, resetting".to_string());
             self.state_turn.in_initial_placement_phase = false;
-            self.next_menu();
+            self.pop_menu();
         } else {
-            if !from_setup{
+            if !from_setup {
                 self.state_turn.active_player += 1;
             }
             self.log(format!("setting up placement for player {}",
@@ -182,20 +183,17 @@ impl Game {
                 placement_menu.reset(placeable_armies);
                 self.menu_stack.set_current(ViewsEnum::ArmyPlacement);
             }
-            if from_setup{
-                bind!(self.get_view_main(), main_view);
-                main_view.set_active(self.menu_stack.get()); // menu borrows army placement
+            if from_setup {
+                self.activate_current_menu();// borrows army placement
             }
         }
     }
 
 
-    pub fn next_menu(&mut self) {
-        let next: ViewsEnum;
+    pub fn pop_menu(&mut self) {
         if self.menu_stack.is_empty() {
             // this means that the current players turn has ended
             //todo check if a player is knocked out and skip their turn
-            // could be done recursively, but would need game end check
             self.log("menu stack empty moving on to next player".to_string());
 
             if self.state_turn.in_initial_placement_phase {
@@ -224,78 +222,76 @@ impl Game {
                 }
                 placement_menu.reset(reinforcing_army_count);
 
-                self.menu_stack.set_current(ViewsEnum::Turn);
+                self.menu_stack.push(ViewsEnum::Turn);
                 self.menu_stack.push(ViewsEnum::ArmyPlacement);
             }
-            next = self.menu_stack.get();
+            self.activate_current_menu();
         } else {
-            next = self.menu_stack.pop();
+            let _ = self.menu_stack.pop();
+            self.activate_current_menu();
         }
-        bind!(self.get_view_main(), main_view);
-        main_view.set_active(next);
     }
 
     pub fn push_army_placement(&mut self, armies: u32) {
-        let m = self.get_army_placement();
-        let mut menu = m.borrow_mut();
+        bind_mut!(self.get_army_placement(), menu);
         menu.armies = armies;
-        self.push_menu(ViewsEnum::ArmyPlacement);
+        self.push_and_activate_menu(ViewsEnum::ArmyPlacement);
     }
 
     pub fn push_turn_menu(&mut self) {
         todo!()
     }
 
+    pub fn handle_message_next(&mut self){
+        todo!();
+    }
+
 
     pub fn handle_ui_combat_roll(&mut self, is_attack: bool) {
-        todo!()
-        /*        self.log("combat ui handle".to_string());
-                let mut combat_view = self.get_combat().borrow_mut();
-                if is_attack {
-                    combat_view.is_visible.attack = false;
-                } else {
-                    combat_view.is_visible.defend = false;
-                }
-                if !combat_view.is_visible.defend && !combat_view.is_visible.attack {
-                    if self.combat_state.combat_ongoing{
-                        self.combat_state.apply_losses();
-                    }else {
-                        self.combat_state.losses = AttackDefendPair::default();
-                        self.combat_state.combat_ongoing = true;
+        self.log("combat ui handle".to_string());
+        bind_mut!(self.get_combat(), combat_view);
+        //bind_mut!(self.get_combat(), combat_view);
+        if is_attack {
+            combat_view.is_visible.attack = false;
+        } else {
+            combat_view.is_visible.defend = false;
+        }
+        if !combat_view.is_visible.defend && !combat_view.is_visible.attack {
+            // if both sides have selected their armies.
+            if self.combat_state.combat_ongoing {
+                // if this is not the first round of combat
+                self.combat_state.apply_losses();
+            } else {
+                // if it is setup state
+                self.combat_state.losses = AttackDefendPair::default();
+                self.combat_state.combat_ongoing = true;
 
-                        let prov_ids = AttackDefendPair{
-                            attack: self.state_turn.targets.attack.unwrap(),
-                            defend: self.state_turn.targets.defend.unwrap(),
-                        };
-                        self.combat_state.armies = AttackDefendPair{
-                            attack: self.model.get_prov_from_id(&prov_ids.attack).unwrap().army_count,
-                            defend: self.model.get_prov_from_id(&prov_ids.defend).unwrap().army_count,
-                        };
-                        self.combat_state.prov_id = prov_ids;
-                    }
+                let prov_ids = AttackDefendPair {
+                    attack: self.state_turn.targets.attack.unwrap(),
+                    defend: self.state_turn.targets.defend.unwrap(),
+                };
+                self.combat_state.armies = AttackDefendPair {
+                    attack: self.model.get_prov_from_id(&prov_ids.attack).unwrap().army_count,
+                    defend: self.model.get_prov_from_id(&prov_ids.defend).unwrap().army_count,
+                };
+                self.combat_state.prov_id = prov_ids;
+            }
 
-                    self.combat_state.num_dice_used = AttackDefendPair{
-                        attack: combat_view.submenus.attack.get_armies_selected(),
-                        defend: combat_view.submenus.defend.get_armies_selected()
-                    };
-                    self.combat_state = self.model.combat_engine.next_round(
-                        self.combat_state.clone());
+            self.combat_state.num_dice_used = AttackDefendPair {
+                attack: combat_view.submenus.attack.get_armies_selected(),
+                defend: combat_view.submenus.defend.get_armies_selected(),
+            };
+            self.combat_state = self.model.combat_engine.next_round(
+                self.combat_state.clone());
+            // the combat state gets applied to the map in the dice roll menu
 
-                    let remaining_armies = self.combat_state.get_remaining();
-
-                    if remaining_armies.defend == 0 || remaining_armies.attack == 1{
-
-                    }else {
-
-                    }
-
-                    let dice_menu = self.get_view_dice().borrow_mut();
-
-                    self.set_ui_state(UiState::DICE_ROLL);
-                } else {
-                    combat_view.update();
-                }
-        */
+            bind_mut!(self.get_view_dice(), dice_menu);
+            dice_menu.reset(self.combat_state.dice_rolls.clone(),
+                    self.combat_state.losses.clone());
+            self.push_and_activate_menu(ViewsEnum::DiceRolls);
+        } else {
+            combat_view.update();
+        }
     }
 
     pub fn handle_ui_dice_next(&mut self) {
@@ -360,6 +356,6 @@ impl Game {
         self.log("retreat handle".to_string());
         bind_mut!(self.get_turn(), turn);
         turn.can_reinforce = false;
-        self.next_menu();
+        self.pop_menu();
     }
 }
