@@ -7,18 +7,26 @@ use crate::build_constructor;
 use crate::game::Game;
 use gloo::console::log as console_log;
 
-
+//todo player label?
 
 pub struct ViewArmyPlacement{
     head: WrpDiv,
     count_label: WrpDiv,
     pub armies: u32,
+    pub default_msg:String,
 }
 
 impl View for ViewArmyPlacement{
     fn update(&mut self) {
         self.count_label.inline_txt(&format!("You still need to Place {} armies",
                                            self.armies));
+    }
+}
+
+impl ViewArmyPlacement{
+    pub fn reset(&mut self, armies:u32){
+        self.armies = armies;
+        self.update();
     }
 }
 
@@ -37,6 +45,7 @@ fn create_view_army_placement(_: Rc<RefCell<Game>>, mount_id:&str) -> ViewArmyPl
         head,
         count_label,
         armies: 0,
+        default_msg: "Please click on a province, to place an army.".to_string(),
     };
 }
 

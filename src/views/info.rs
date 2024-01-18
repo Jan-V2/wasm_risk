@@ -31,8 +31,13 @@ impl ViewInfo{
         self.prev_timeout = Some(timeout)
     }
 
-    fn display_default(&mut self){
+    pub fn display_default(&mut self){
         self.info_div.inline_txt(&self.default_string);
+    }
+
+    pub fn set_default(&mut self, display_str:&String){
+        self.default_string = display_str.clone();
+        self.display_default();
     }
 }
 
@@ -42,7 +47,7 @@ impl View for ViewInfo {
     }
 }
 
-fn create_view_info(mount_id:&str, default_string:String)->Rc<RefCell<ViewInfo>>{
+pub fn create_view_info(mount_id:&str, default_string:String)->Rc<RefCell<ViewInfo>>{
     return Rc::new(RefCell::new(ViewInfo{
         info_div: WrpDiv::from_id(mount_id),
         prev_timeout: None,

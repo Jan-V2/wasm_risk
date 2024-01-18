@@ -10,10 +10,9 @@ use std::rc::Rc;
 use crate::views::dice_roll::ViewDiceRoll;
 use crate::views::main::{create_view_main, ViewMain, ViewsEnum, ViewsStruct};
 use crate::views::turn::ViewTurn;
- use paste::paste;
 use crate::views::army_placement::ViewArmyPlacement;
 use crate::views::combat::ViewCombat;
-use crate::views::info::ViewInfo;
+use crate::views::info::{create_view_info, ViewInfo};
 use stack_stack::{Stack, stack};
 use crate::utils::structs::AttackDefendPair;
 
@@ -22,11 +21,9 @@ todo start placement:
 run placement with special flag.
 depending on flag handeler changes
 handeler handels single placement or start
-todo "return register" for acessing views nested
-have a stack of previous menues
-todo have generic handler for stack return
-this could be used by when selecting cards
 todo should .update omit &mut or should .show require &mut
+
+todo display player n's turn msg at the start of each turn
 */
 
 
@@ -67,15 +64,27 @@ impl ProvLookupTable {
     }
 }
 
-#[derive(Default)]
 pub struct GameTurnState {
     pub(super) targets:AttackDefendPair<Option<u32>>,
     pub(super) active_player:u32,
+    pub(super) in_initial_placement_phase: bool, //
+    pub(super) in_setup:bool,
+}
+
+impl GameTurnState{
+    pub fn new()->GameTurnState{
+        GameTurnState{
+            targets: Default::default(),
+            active_player: 0,
+            in_initial_placement_phase: true,
+            in_setup: true,
+        }
+    }
 }
 
 macro_rules! create_getter {
     ($view_name:ident, $ty:ident) => {
-        paste!{
+        paste::paste!{
         impl Game{
             pub fn [<get_ $view_name>](&self)->Rc<RefCell<$ty>>{
                 self.views.as_ref().unwrap().$view_name.clone()
@@ -90,6 +99,26 @@ create_getter!(army_placement, ViewArmyPlacement);
 create_getter!(combat, ViewCombat);
 create_getter!(dice_rolls, ViewDiceRoll);
 
+#[macro_export]
+macro_rules! bind {
+    ($gettter:stmt, $var_name:ident) => {
+        paste::paste!{
+            let [<bind_ $var_name>] = $gettter;
+            let $var_name = [<bind_ $var_name>].borrow();
+        }
+    };
+}
+
+#[macro_export]
+macro_rules! bind_mut {
+    ($gettter:stmt, $var_name:ident) => {
+        paste::paste!{
+            let [<bind_ $var_name>] = $gettter;
+            let mut $var_name = [<bind_ $var_name>].borrow_mut();
+        }
+    };
+}
+
 pub struct Game {
     pub model: Model,
     pub prov_lookup: ProvLookupTable,
@@ -98,24 +127,29 @@ pub struct Game {
     pub logging: bool,
     pub state_turn: GameTurnState,
     pub ui_man: UiStateManager,
-    pub info_display_div: ViewInfo,
 
     pub view_main: Option<Rc<RefCell<ViewMain>>>,
-    pub info_view: Option<Rc<RefCell<ViewInfo>>>,
+    pub info_view: Rc<RefCell<ViewInfo>>,
     pub views:Option<ViewsStruct>,
-
-    pub menu_stack:Stack<ViewsEnum, 20>,// made big enough that it should never fill up
+    pub menu_stack:ActiveMenu,
     pub current_menu:ViewsEnum,
     pub combat_state:CombatState,
 }
 
 
-pub struct Active_menu{
+pub struct ActiveMenu {
     menu_stack:Stack<ViewsEnum, 20>,// made big enough that it should never fill up
     current:ViewsEnum,
 }
 
-impl Active_menu{
+impl ActiveMenu {
+    pub fn new()->ActiveMenu{
+        ActiveMenu{
+            menu_stack: Stack::with_capacity(),
+            current: Default::default(),
+        }
+    }
+    
     pub fn get(&self)->ViewsEnum{
         self.current.clone()
     }
@@ -124,13 +158,13 @@ impl Active_menu{
         if self.menu_stack.is_empty(){
             return None;
         }else{
-            return Some(self.menu_stack.as_slice().clone()[0].clone());
+            let test = self.menu_stack.as_slice()[0].clone();
+            return Some(test);
         }
     }
 
     pub fn get_num_queued(&self)->u32{
-        self.menu_stack.len() as u32
-        ;
+        return self.menu_stack.len() as u32;
     }
 
     pub fn pop(&mut self)->ViewsEnum{
@@ -145,6 +179,14 @@ impl Active_menu{
         self.menu_stack.push(self.current.clone()).ok();
         self.current = menu;
     }
+
+    pub fn is_empty(&self)->bool{
+        self.menu_stack.is_empty()
+    }
+
+    pub fn set_current(&mut self, view:ViewsEnum){
+        self.current = view;
+    }
 }
 
 impl Game {
@@ -157,14 +199,12 @@ impl Game {
             flag_scale: 0.5,
             config_sig: None,
             logging: use_logging,
-            state_turn: Default::default(),
+            state_turn: GameTurnState::new(),
             ui_man: ui_state_man,
-            info_display_div: ViewInfo::create(
-                &"text_out".to_string(), "setup".to_string()),
             view_main: None,
-            info_view: None,
+            info_view: create_view_info("text_out", "setup".to_string()),
             views: None,
-            menu_stack: Stack::with_capacity(),
+            menu_stack: ActiveMenu::new(),
             current_menu: Default::default(),
             combat_state: CombatState::default(),
         };
@@ -196,7 +236,7 @@ impl Game {
         self.draw_board();
     }
 */
-    pub fn handle_canvas_noop(&mut self, state :UiState){
+    pub fn handle_canvas_noop(&mut self, state : ViewsEnum){
         self.log(format!("in state: {:?} the canvas is not handled", state))
     }
 
@@ -224,8 +264,8 @@ impl Game {
 
 
     pub(super) fn assign_provs_random(&mut self) {
-        gloo::console::log!(format!("players len = {}", self.model.players.len()));
-        let player_count = self.model.players.len();
+        gloo::console::log!(format!("players len = {}", self.model.get_player_count()));
+        let player_count = self.model.get_player_count() as usize;
         let prov_total = self.model.provinces.len() as u32;
 
         let mut provs_available: Vec<u32> = vec![];
@@ -311,12 +351,12 @@ impl Game {
         if self.menu_stack.is_empty(){
             panic!("menu_stack is empty, can't set next menu")
         }
-        self.current_menu = self.menu_stack.pop().unwrap();
+        self.current_menu = self.menu_stack.pop();
         self.get_view_main().borrow().set_active(self.current_menu.clone())
     }
 
     pub fn push_menu(&mut self, menu:ViewsEnum){
-        self.menu_stack.push(self.current_menu.clone()).unwrap();
+        self.menu_stack.push(self.current_menu.clone());
         self.current_menu = menu;
         self.get_view_main().borrow().set_active(self.current_menu.clone());
     }
@@ -361,16 +401,15 @@ impl Game {
     pub(super) fn is_owned_by_active(&self, prov_id: &u32) -> bool {
         let owner = self.model.get_owner_from_prov_id(prov_id);
         if owner.is_some() {
-            return owner.unwrap() == self.config_sig.unwrap().active_player.get();
+            return owner.unwrap() == self.state_turn.active_player;
         }
         false
     }
 
-
-
     pub fn set_player_config(&mut self, config: PlayerConfig) {
         gloo::console::log!(format!("player count = {}", config.player_count));
         gloo::console::log!(format!("{:?}", config));
+        self.state_turn.in_setup = false;
         for i in 0..config.player_count {
             self.model.players.push(Player {
                 id: i as u32,
@@ -381,30 +420,9 @@ impl Game {
                 is_computer: config.player_is_ai[i as usize],
             })
         }
-        self.log(format!("{:?}", self.model.players));
-        let armies_per_player =
-            Rules::armies_per_players_start(config.player_count as u32).unwrap();
+
         self.assign_provs_random();
-
-        /*
-        let mut count_id = vec![0u32; config.player_count as usize];
-        for prov in provs {
-            count_id[prov.owner_id as usize] += 1;
-        }
-        self.log(format!("provinces per player {:?}", count_id));
-        */
-
-        let provs = &self.model.provinces;
-        let mut state = self.ui_man.start_army_placement.get();
-        state.num_players = config.player_count as u32;
-
-        for i in 0..state.num_players as usize {
-            state.armies[i] =
-                armies_per_player - self.model.players[i].get_owned_provs(provs).len() as u32;
-            self.log(format!("found {} armies for player {}", state.armies[i], i));
-        }
-        self.ui_man.start_army_placement.update(state);
-        self.set_ui_state(UiState::ARMY_PLACEMENT_START);
+        self.army_placement_start_next(true);
         self.draw_board();
     }
 

@@ -27,6 +27,14 @@ impl View for ViewTurn {
     }
 }
 
+impl ViewTurn {
+    pub fn reset(&mut self, player_id:u32){
+        self.can_reinforce = true;
+        self.player_id = player_id;
+        self.update();
+    }
+}
+
 impl_visibility!(ViewTurn);
 
 pub fn create_view_turn(glob: Rc<RefCell<Game>>, mount_id:&str) -> Rc<RefCell<ViewTurn>>{

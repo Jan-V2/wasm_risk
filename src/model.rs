@@ -100,6 +100,10 @@ impl Model{
         }
         return acc;
     }
+
+    pub fn get_player_count(&self)->u32{
+        self.players.len() as u32
+    }
 }
 
 #[derive(Clone, Debug, Default)]
