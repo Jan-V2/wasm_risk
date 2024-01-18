@@ -4,8 +4,8 @@ use std::rc::Rc;
 use wasm_bindgen::JsCast;
 use web_sys::{Event, HtmlInputElement, HtmlSelectElement};
 use crate::game::Game;
-use crate::ui::main::UiState;
 use crate::utils::consts::{MAX_PLAYERS, PLAYER_COLORS};
+
 
 #[derive(Debug, Clone, Copy)]
 pub struct PlayerConfig{
@@ -18,12 +18,12 @@ impl PlayerConfig {
     fn new()->PlayerConfig{
         PlayerConfig{
             player_count: 2,
-
             player_colors: create_signal(vec!["empty".to_string(); MAX_PLAYERS]),
             player_is_ai: [false; MAX_PLAYERS],
         }
     }
 }
+
 
 #[derive(Props, Clone, Copy)]
 pub struct PlayerConfigProps {
@@ -32,11 +32,12 @@ pub struct PlayerConfigProps {
     done:Signal<bool>,
 }
 
+
 #[component]
 pub fn PlayerSetup<G: Html>( props: PlayerConfigProps) -> View<G> {
-
     let checkbox_handle = move |e:Event| {
-        let input_elem = e.target().unwrap().dyn_ref::<HtmlInputElement>().unwrap().clone();
+        let input_elem = e.target().unwrap()
+            .dyn_ref::<HtmlInputElement>().unwrap().clone();
         let is_checked = input_elem.checked();
         let idx = props.idx as usize;
         let mut tmp_player_config = (props.data.get()).clone();
@@ -59,9 +60,9 @@ pub fn PlayerSetup<G: Html>( props: PlayerConfigProps) -> View<G> {
 
 #[component]
 pub fn Color_Setup< G: Html>( props: PlayerConfigProps) -> View<G> {
-
     let onchange_handle = move |e:Event| {
-        let select_elem = e.target().unwrap().dyn_ref::<HtmlSelectElement>().unwrap().clone();
+        let select_elem = e.target().unwrap()
+            .dyn_ref::<HtmlSelectElement>().unwrap().clone();
         let selected_option = select_elem.value();
         let idx = props.idx as usize;
         let tmp_player_config = (props.data.get()).clone();
@@ -79,19 +80,20 @@ pub fn Color_Setup< G: Html>( props: PlayerConfigProps) -> View<G> {
     );
 
     view! {
-        select( class="form-select", style="width: fit-content", on:change=move |e| onchange_handle(e)) {
+        select( class="form-select", style="width: fit-content",
+            on:change=move |e| onchange_handle(e)) {
             option(value="empty"){"choose a color"}
             (options)
         }
     }
 }
 
+
 #[derive(Props,  Clone)]
 pub struct PlayersSetupProps {
     pub game_ref: Rc<RefCell<Game>>,
-    pub ui_state:Signal<UiState>,
+    pub ui_state:Signal<bool>,
 }
-
 
 
 #[component]
@@ -138,9 +140,7 @@ pub fn PlayersSetup< G : Html>( props:PlayersSetupProps) -> View<G> {
                 let mut found:Vec<String> = Vec::new();
                 for i in 0..num_players{
                     if !found.contains(&player_colors[i]){
-
                         found.push(player_colors[i].clone());
-
                     }else{
                         validated = false;
                         break;
@@ -154,7 +154,7 @@ pub fn PlayersSetup< G : Html>( props:PlayersSetupProps) -> View<G> {
                 }
             }else{
                 props.game_ref.borrow_mut().set_player_config(tmp_player_config);
-                props.ui_state.set(UiState::ARMY_PLACEMENT_START);
+                props.ui_state.set(false);
             }
         }
 
@@ -166,7 +166,7 @@ pub fn PlayersSetup< G : Html>( props:PlayersSetupProps) -> View<G> {
         colors[1] = PLAYER_COLORS[1].to_string();
         config.player_colors.set(colors);
         props2.game_ref.borrow_mut().set_player_config(config);
-        props2.ui_state.set(UiState::ARMY_PLACEMENT_START);
+        props2.ui_state.set(false);
     };
 
 
@@ -176,7 +176,8 @@ pub fn PlayersSetup< G : Html>( props:PlayersSetupProps) -> View<G> {
                 let mut tmp_player_config = (player_config_sig.get()).clone();
                 tmp_player_config.player_count = x;
                 player_config_sig.set(tmp_player_config);
-        }) { (x) } }
+            }) { (x) }
+        }
         ).collect()
     ));
 

@@ -1,11 +1,8 @@
 use crate::game::*;
-use crate::ui::main::UiState;
 use gloo::console::log as console_log;
 use marble::traits::View;
 use crate::{bind, bind_mut};
 use crate::model::{CombatState, Coord, Rules};
-use crate::ui::ui_state_manager::{StatefullView};
-use crate::ui::ui_state_manager::SelectedView::Combat;
 use crate::utils::structs::AttackDefendPair;
 use crate::views::info::ViewInfo;
 use crate::views::main::ViewsEnum;
@@ -248,7 +245,7 @@ impl Game {
 
 
     pub fn handle_ui_combat_roll(&mut self, is_attack: bool) {
-        self.log("combat ui handle".to_string());
+        self.log("combat syca handle".to_string());
         bind_mut!(self.get_combat(), combat_view);
         //bind_mut!(self.get_combat(), combat_view);
         if is_attack {
@@ -285,7 +282,7 @@ impl Game {
                 self.combat_state.clone());
             // the combat state gets applied to the map in the dice roll menu
 
-            bind_mut!(self.get_view_dice(), dice_menu);
+            bind_mut!(self.get_dice_rolls(), dice_menu);
             dice_menu.reset(self.combat_state.dice_rolls.clone(),
                     self.combat_state.losses.clone());
             self.push_and_activate_menu(ViewsEnum::DiceRolls);

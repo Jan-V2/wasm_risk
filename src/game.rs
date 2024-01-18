@@ -1,7 +1,5 @@
 use crate::model::{CombatState, Coord, Model, Player, Rules};
-use crate::ui::main::{UiInfo, UiState};
-use crate::ui::player_setup::PlayerConfig;
-use crate::ui::ui_state_manager::{StatefullView, UiStateManager, };
+use crate::syca::player_setup::PlayerConfig;
 use crate::utils::funcs::rand_int;
 use gloo::console::log as console_log;
 use js_sys::Math::sqrt;
@@ -123,11 +121,8 @@ pub struct Game {
     pub model: Model,
     pub prov_lookup: ProvLookupTable,
     pub flag_scale: f64,
-    pub config_sig: Option<UiInfo>,
     pub logging: bool,
     pub state_turn: GameTurnState,
-    pub ui_man: UiStateManager,
-
     pub view_main: Option<Rc<RefCell<ViewMain>>>,
     pub info_view: Rc<RefCell<ViewInfo>>,
     pub views:Option<ViewsStruct>,
@@ -193,16 +188,12 @@ impl ActiveMenu {
 
 impl Game {
     pub fn new(prov_lookup: ProvLookupTable, use_logging: bool) -> Game {
-        let mut ui_state_man = UiStateManager::build();
-        ui_state_man.mount();
         return Game {
             model: Model::new_from_json(),
             prov_lookup,
             flag_scale: 0.5,
-            config_sig: None,
             logging: use_logging,
             state_turn: GameTurnState::new(),
-            ui_man: ui_state_man,
             view_main: None,
             info_view: create_view_info("text_out", "setup".to_string()),
             views: None,
@@ -299,15 +290,6 @@ impl Game {
         }
     }
 
-
-
-    pub(super) fn ui_info_ref(&self) -> &UiInfo {
-        self.config_sig.as_ref().unwrap()
-    }
-
-    pub fn set_config_sig(&mut self, info: UiInfo) {
-        self.config_sig = Some(info);
-    }
 
     pub fn show_message(&mut self, _label:String){
         // todo add view that just shows a message
@@ -429,26 +411,11 @@ impl Game {
         }
     }
 
-
-
     pub fn create_views(&mut self, self_ref: Rc<RefCell<Game>>, mount_id:&str) {
         self.view_main  = Some(create_view_main(self_ref.clone(), mount_id));
         self.views = Some(self.get_view_main().borrow().views.clone());
-
-    }
-
-
-    pub(super) fn get_view_dice(&self) -> Rc<RefCell<ViewDiceRoll>> {
-        return self.get_views().dice_rolls;
-    }
-
-
-    pub(super) fn get_views(&self)-> ViewsStruct{// todo create macro that does this automatically
-        let ret = self.views.as_ref();
-        if ret.is_none(){
-            panic!("can't access ViewsStruct , not set")
-        }
-        ret.unwrap().clone()
+        bind!(self.get_view_main(), view_main);
+        view_main.hide_all();
     }
 
     pub(super) fn get_view_main(&self)-> Rc<RefCell<ViewMain>>{
@@ -458,8 +425,6 @@ impl Game {
         }
         ret.unwrap().clone()
     }
-
-
 }
 
 

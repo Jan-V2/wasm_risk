@@ -8,7 +8,7 @@ mod model;
 mod game;
 mod utils;
 mod data_include;
-mod ui;
+mod syca;
 mod game_event_handlers;
 mod views;
 
@@ -20,7 +20,7 @@ use crate::game::Game;
 use crate::element_getters::{ get_element_by_id};
 use gloo::console::log as console_log;
 use sycamore::prelude::create_signal;
-use crate::ui::main::UiMainProps;
+use crate::syca::main::UiMainProps;
 
 #[wasm_bindgen(start)]
 fn setup() {
@@ -35,7 +35,7 @@ fn setup() {
     canvas::ui_init_canvas(refc_game.clone());
 
     let cloj = || {
-        ui::main::UiSide(UiMainProps {
+        syca::main::UiSide(UiMainProps {
             game_ref: create_signal(refc_game)
         })
     };
