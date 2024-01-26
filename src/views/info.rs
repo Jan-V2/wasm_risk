@@ -6,7 +6,7 @@ use marble::wrap::{*};
 use marble::traits::{*};
 #[allow(unused_imports)]
 use gloo::console::log as console_log;
-
+use crate::views::message::ViewMessage;
 
 
 pub struct ViewInfo{

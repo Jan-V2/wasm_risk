@@ -6,6 +6,7 @@ use marble::traits::{*};
 use crate::build_constructor;
 use crate::game::Game;
 use gloo::console::log as console_log;
+use crate::views::info::ViewInfo;
 
 //todo player label?
 
@@ -22,6 +23,14 @@ impl View for ViewArmyPlacement{
                                            self.armies));
     }
 }
+
+
+impl DefaultMsg for ViewInfo{
+    fn default_msg(&self) -> String {
+        return "Click on the map, to place your armies".to_string();
+    }
+}
+
 
 impl ViewArmyPlacement{
     pub fn reset(&mut self, armies:u32){

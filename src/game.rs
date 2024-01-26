@@ -5,6 +5,7 @@ use gloo::console::log as console_log;
 use js_sys::Math::sqrt;
 use std::cell::{RefCell, RefMut};
 use std::rc::Rc;
+use gloo_timers::callback::Timeout;
 use crate::views::dice_roll::ViewDiceRoll;
 use crate::views::main::{create_view_main, ViewMain, ViewsEnum, ViewsStruct};
 use crate::views::turn::ViewTurn;
@@ -12,8 +13,9 @@ use crate::views::army_placement::ViewArmyPlacement;
 use crate::views::combat::ViewCombat;
 use crate::views::info::{create_view_info, ViewInfo};
 use stack_stack::{Stack, stack};
+use crate::utils::consts::DEBUG_MENU_STACK_POP;
 use crate::utils::structs::AttackDefendPair;
-
+use crate::views::message::ViewMessage;
 /*
 todo start placement:
 run placement with special flag.
@@ -96,6 +98,7 @@ create_getter!(turn, ViewTurn);
 create_getter!(army_placement, ViewArmyPlacement);
 create_getter!(combat, ViewCombat);
 create_getter!(dice_rolls, ViewDiceRoll);
+create_getter!(message, ViewMessage);
 
 #[macro_export]
 macro_rules! bind {
@@ -128,6 +131,7 @@ pub struct Game {
     pub views:Option<ViewsStruct>,
     pub menu_stack:ActiveMenu,
     pub combat_state:CombatState,
+    pub self_ref:Option<Rc<RefCell<Game>>>,
 }
 
 
@@ -137,6 +141,10 @@ pub struct ActiveMenu {
 }
 
 impl ActiveMenu {
+    // todo clean up the api
+    // calling pop on the ActiveMenu struct removes a menu
+    // but calling self.pop_menu() inside game also loads the menu
+    // ideally, you'd only have to call one place instead of multible
     pub fn new()->ActiveMenu{
         ActiveMenu{
             menu_stack: Stack::with_capacity(),
@@ -165,6 +173,9 @@ impl ActiveMenu {
         // this assumption is that the data is already loaded into the menu,
         // and only needs to be displayed
         // this means the the previous state of the menu is restored
+        if DEBUG_MENU_STACK_POP{
+            console_log!(format!("Debug: menu stack pre pop {:?}", self.menu_stack))
+        }
         if self.menu_stack.is_empty(){
             panic!("can't pop menu stack, stack empty. current menu {:?}", self.current)
         }
@@ -199,7 +210,17 @@ impl Game {
             views: None,
             menu_stack: ActiveMenu::new(),
             combat_state: CombatState::default(),
+            self_ref: None,
         };
+    }
+
+    pub fn pop_menu_async(&self, time_ms:u32){
+        let game_ref = self.self_ref.as_ref().unwrap().clone();
+        let t = Timeout::new(time_ms, move || {
+            game_ref.borrow_mut().pop_menu();
+            console_log!("popped menu async")
+        });
+        t.forget();
     }
 
 /*
@@ -291,6 +312,8 @@ impl Game {
     }
 
 
+
+
     pub fn show_message(&mut self, _label:String){
         // todo add view that just shows a message
 /*        self.ui_man.view_label.update(StateLabel{
@@ -333,6 +356,17 @@ impl Game {
     }
 
     pub fn activate_current_menu(&mut self){
+        let current_menu = self.menu_stack.get();
+        match current_menu {
+            ViewsEnum::Turn => {
+                bind!(self.get_turn(), turn);
+            }
+
+            ViewsEnum::ArmyPlacement => {}
+            ViewsEnum::Combat => {}
+            ViewsEnum::DiceRolls => {}
+            ViewsEnum::Message => {}
+        }
         self.get_view_main().borrow().set_active(self.menu_stack.get());
     }
 
@@ -412,6 +446,7 @@ impl Game {
     }
 
     pub fn create_views(&mut self, self_ref: Rc<RefCell<Game>>, mount_id:&str) {
+        self.self_ref = Some(self_ref.clone());
         self.view_main  = Some(create_view_main(self_ref.clone(), mount_id));
         self.views = Some(self.get_view_main().borrow().views.clone());
         bind!(self.get_view_main(), view_main);

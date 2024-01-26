@@ -127,6 +127,7 @@ impl View for ViewCombat{
     }
 }
 
+
 impl_visibility!(ViewCombat);
 
 pub fn create_view_combat(game: Rc<RefCell<Game>>, mount_id: &str) -> Rc<RefCell<ViewCombat>> {

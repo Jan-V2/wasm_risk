@@ -19,12 +19,13 @@ pub struct ViewTurn {
 impl View for ViewTurn {
     fn update(&mut self) {
         if self.can_reinforce{
-            self.btn_next.inline_txt("Reinforce")
+            self.btn_next.inline_txt("Reinforce and end turn")
         }else {
             self.btn_next.inline_txt("End turn")
         }
         self.player_label.inline_txt(format!("Player: {}", self.player_id +1).as_str())
     }
+
 }
 
 impl ViewTurn {
@@ -36,6 +37,7 @@ impl ViewTurn {
 }
 
 impl_visibility!(ViewTurn);
+
 
 pub fn create_view_turn(glob: Rc<RefCell<Game>>, mount_id:&str) -> Rc<RefCell<ViewTurn>>{
     console_log!("creating turn view");
@@ -63,8 +65,7 @@ pub fn create_view_turn(glob: Rc<RefCell<Game>>, mount_id:&str) -> Rc<RefCell<Vi
 
     state_ref.borrow().btn_next.set_state_handler(
         state_ref.clone(), |mut s:RefMut<ViewTurn> |{
-            s.can_reinforce = !s.can_reinforce;
-            s.update();
+            s.game_ref.borrow_mut().handle_end_turn(s.can_reinforce)
         },
         "end turn"
     );

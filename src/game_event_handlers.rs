@@ -90,29 +90,6 @@ impl Game {
     }
 
 
-    pub fn handle_start_turn(&mut self) {
-        todo!();//todo make a message appear before the army placement in next
-        // turn, and get rid of this method
-        /*        // check if a player owns a continent
-                console_log!("handle start turn");
-                //self.state_turn.
-                let player = self.get_active_player();
-                let extra_armies = self.model.get_player_continent_armies(&player);
-
-                if extra_armies > 0 {
-                    self.show_label(
-                        format!("you get to place {extra_armies} \
-                        extra armies, because you control continents."),
-                        UiState::ARMY_PLACEMENT);
-                    self.ui_man.army_placement.update(StateArmyPlacement {
-                        armies: extra_armies,
-                        active_player: player,
-                        end_turn_placement: false,
-                    });
-                    self.set_ui_state(UiState::LABEL);
-                }*/
-    }
-
     fn handle_canvas_army_placement(&mut self, prov_id: u32) {
         // handles the canvas click event for amry placement, then pops the stack
         self.log("handling canvas army placement".to_string());
@@ -169,16 +146,12 @@ impl Game {
                              self.state_turn.active_player));
 
             {
-                bind_mut!(self.info_view.clone(), info_view);
-                bind_mut!(self.get_army_placement(), placement_menu);
-                info_view.set_default(&placement_menu.default_msg);
-
                 let armies_per_player =
                     Rules::armies_per_players_start(self.model.get_player_count()).unwrap();
                 let placeable_armies = armies_per_player -
                     self.model.get_prov_count_owned_by_player(self.state_turn.active_player);
-                placement_menu.reset(placeable_armies);
-                self.menu_stack.set_current(ViewsEnum::ArmyPlacement);
+                self.push_army_placement(placeable_armies);
+                self.activate_current_menu();
             }
             if from_setup {
                 self.activate_current_menu();// borrows army placement
@@ -186,6 +159,34 @@ impl Game {
         }
     }
 
+    pub fn handle_end_turn(&mut self, can_reinforce:bool){
+        if can_reinforce{
+            console_log!("handling player reinforce");
+            bind_mut!(self.get_army_placement(), placement_menu);
+
+            let player_prov_num =
+                self.model.get_prov_count_owned_by_player(self.state_turn.active_player);
+            let mut reinforcing_army_count = player_prov_num / 3;
+            if reinforcing_army_count < 3 {
+                reinforcing_army_count = 3;
+            }
+            placement_menu.reset(reinforcing_army_count);
+            self.menu_stack.set_current(ViewsEnum::ArmyPlacement);
+            self.push_message_view(format!("Because you own {} provinces, you're allowed \
+                to place {} extra armies.", player_prov_num, reinforcing_army_count));
+        }
+        // pops the turn menu
+        // should move on to next player if no reinforcements
+        // otherwise should pop
+        self.pop_menu_async(1);
+    }
+
+
+    pub fn push_message_view(&mut self, msg:String){
+        bind_mut!(self.get_message(), msg_menu);
+        msg_menu.message = msg;
+        self.menu_stack.push(ViewsEnum::Message)
+    }
 
     pub fn pop_menu(&mut self) {
         if self.menu_stack.is_empty() {
@@ -196,31 +197,7 @@ impl Game {
             if self.state_turn.in_initial_placement_phase {
                 self.army_placement_start_next(false);
             } else {
-                let prev_player = self.state_turn.active_player;
-                self.state_turn.active_player = if prev_player + 1
-                    < self.model.players.len() as u32 {
-                    prev_player + 1
-                } else {
-                    0
-                };
-
-                self.info_view.borrow_mut().set_default(
-                    &format!("Player {}'s turn", self.state_turn.active_player));
-                bind_mut!(self.get_turn(), turn_menu);
-                bind_mut!(self.get_army_placement(), placement_menu);
-
-                turn_menu.reset(self.state_turn.active_player);
-
-                let player_prov_num =
-                    self.model.get_prov_count_owned_by_player(self.state_turn.active_player);
-                let mut reinforcing_army_count = player_prov_num / 3;
-                if reinforcing_army_count < 3 {
-                    reinforcing_army_count = 3;
-                }
-                placement_menu.reset(reinforcing_army_count);
-
-                self.menu_stack.push(ViewsEnum::Turn);
-                self.menu_stack.push(ViewsEnum::ArmyPlacement);
+                self.setup_next_turn();
             }
             self.activate_current_menu();
         } else {
@@ -232,15 +209,42 @@ impl Game {
     pub fn push_army_placement(&mut self, armies: u32) {
         bind_mut!(self.get_army_placement(), menu);
         menu.armies = armies;
-        self.push_and_activate_menu(ViewsEnum::ArmyPlacement);
+        self.menu_stack.push(ViewsEnum::ArmyPlacement);
     }
 
-    pub fn push_turn_menu(&mut self) {
-        todo!()
+    pub fn setup_next_turn(&mut self) {
+        // check if a player owns a continent
+        self.log("setting up next turn".to_string());
+
+        // select next player
+        //todo skip over players that have been defeated
+        let prev_player = self.state_turn.active_player;
+        self.state_turn.active_player = if prev_player + 1
+            < self.model.players.len() as u32 {
+            prev_player + 1
+        } else {
+            0
+        };
+
+        self.info_view.borrow_mut().set_default(
+            &format!("Player {}'s turn", self.state_turn.active_player));
+
+        bind_mut!(self.get_turn(), turn_menu);
+        let active_player = self.state_turn.active_player;
+        turn_menu.reset(active_player);
+        self.menu_stack.push(ViewsEnum::Turn);
+
+        let extra_armies = self.model.get_player_continent_armies(&active_player);
+        if extra_armies > 0 {
+            self.push_army_placement(extra_armies);
+            self.push_message_view(format!("you get to place {extra_armies} \
+                extra armies, because you control continents."));
+        }
+
     }
 
     pub fn handle_message_next(&mut self){
-        todo!();
+        self.pop_menu();
     }
 
 
@@ -331,6 +335,8 @@ impl Game {
                 }
         */
     }
+
+
 
     pub fn apply_combat_res_to_map(&mut self) {
         self.combat_state.apply_losses();

@@ -83,6 +83,17 @@ impl Model{
         return ret;
     }
 
+    pub fn get_player_armies_reinforce(&self, player_id:u32)->u32{
+        // the number of armies this player get's if they reinforce
+        let player_prov_num =
+            self.get_prov_count_owned_by_player(player_id);
+        let mut reinforcing_army_count = player_prov_num / 3;
+        if reinforcing_army_count < 3 {
+            reinforcing_army_count = 3;
+        }
+        return reinforcing_army_count;
+    }
+
     pub fn get_player_continent_armies(&self, player_id:&u32) -> u32 {
         let mut acc = 0;
         let mut found_continents:Vec<_> = Continent::iter().collect();
