@@ -27,42 +27,7 @@ todo display player n's turn msg at the start of each turn
 */
 
 
-pub struct ProvLookupTable {
-    pub pixels: Vec<[u8; 3]>,
-    pub width: u32,
-    pub max_div: u32,
-}
 
-impl ProvLookupTable {
-    fn get_flat_ind(&self, coord: &Coord) -> usize {
-        return (coord.x + coord.y * self.width as i32) as usize;
-    }
-
-    pub fn target_is_valid(&self, coord: &Coord) -> bool {
-        // refocusing and other actions can produce canvas events with locations outside the canvas
-        let idx = self.get_flat_ind(coord);
-        return idx < self.pixels.len();
-    }
-
-    fn get_coord(&self, coord: &Coord) -> [u8; 3] {
-        let idx = self.get_flat_ind(coord);
-        return self.pixels[idx];
-    }
-
-    fn compare_colors(&self, target: &Coord, compare: &Coord) -> bool {
-        let mut color_div_acc = 0;
-        let color_target = self.get_coord(target);
-        let color_compare = self.get_coord(compare);
-        for i in 0..color_target.len() {
-            color_div_acc += (color_target[i] as i32 - color_compare[i] as i32).abs();
-        }
-        return color_div_acc < self.max_div as i32;
-    }
-
-    fn dist_between_pnts(pnt1: &Coord, pnt2: &Coord) -> i32 {
-        sqrt((pnt1.x - pnt2.x).pow(2) as f64 + (pnt1.y - pnt2.y).pow(2) as f64) as i32
-    }
-}
 
 pub struct GameTurnState {
     pub(super) targets:AttackDefendPair<Option<u32>>,
@@ -136,8 +101,9 @@ pub struct Game {
 
 
 pub struct ActiveMenu {
-    menu_stack:Stack<ViewsEnum, 20>,// made big enough that it should never fill up
+    menu_stack:Vec<ViewsEnum>,
     current:ViewsEnum,
+    debug:bool
 }
 
 impl ActiveMenu {
@@ -145,24 +111,32 @@ impl ActiveMenu {
     // calling pop on the ActiveMenu struct removes a menu
     // but calling self.pop_menu() inside game also loads the menu
     // ideally, you'd only have to call one place instead of multible
-    pub fn new()->ActiveMenu{
+    pub fn new(debug:bool)->ActiveMenu{
         ActiveMenu{
-            menu_stack: Stack::with_capacity(),
+            menu_stack: vec![],
             current: Default::default(),
+            debug,
         }
     }
     
+    fn print_stack(&self){
+        console_log!("printing stack len=", self.menu_stack.len());
+        console_log!(format!("current = {:?}", self.current));
+        for item in &self.menu_stack{
+            console_log!("printing stack");
+            console_log!(format!("{:?}\n", item));
+        } 
+    }
+
     pub fn get(&self)->ViewsEnum{
         self.current.clone()
     }
 
     pub fn get_next(&mut self)->Option<ViewsEnum>{
-        if self.menu_stack.is_empty(){
+        if self.menu_stack.len() == 0{
             return None;
-        }else{
-            let test = self.menu_stack.as_slice()[0].clone();
-            return Some(test);
         }
+        return Some(self.menu_stack[0].clone())
     }
 
     pub fn get_num_queued(&self)->u32{
@@ -184,7 +158,11 @@ impl ActiveMenu {
     }
 
     pub fn push(&mut self, menu:ViewsEnum){
-        self.menu_stack.push(self.current.clone()).ok();
+        if self.debug{
+            console_log!(format!("pushing {:?}", menu));
+            self.print_stack();
+        } 
+        self.menu_stack.push(self.current.clone());
         self.current = menu;
     }
 
@@ -193,6 +171,10 @@ impl ActiveMenu {
     }
 
     pub fn set_current(&mut self, view:ViewsEnum){
+        if self.debug{
+            console_log!(format!("setting current {:?}", view));
+            self.print_stack();
+        } 
         self.current = view;
     }
 }
@@ -208,7 +190,7 @@ impl Game {
             view_main: None,
             info_view: create_view_info("text_out", "setup".to_string()),
             views: None,
-            menu_stack: ActiveMenu::new(),
+            menu_stack: ActiveMenu::new(true),
             combat_state: CombatState::default(),
             self_ref: None,
         };
@@ -240,8 +222,7 @@ impl Game {
         }else {
             // attack ongoing or failed
             self.log("attack failed".to_string());
-            prov_attack.army_count = 1 + state_combat.armies_attacking;
-            prov_defend.army_count = state_combat.armies_defending;
+            prov_attack.army_count = 1 + state_combat.armies_attacking; prov_defend.army_count = state_combat.armies_defending;
         }
         self.log(format!("{:?}", prov_attack));
         self.model.set_prov(prov_attack);
@@ -462,4 +443,40 @@ impl Game {
     }
 }
 
+pub struct ProvLookupTable {
+    pub pixels: Vec<[u8; 3]>,
+    pub width: u32,
+    pub max_div: u32,
+}
+
+impl ProvLookupTable {
+    fn get_flat_ind(&self, coord: &Coord) -> usize {
+        return (coord.x + coord.y * self.width as i32) as usize;
+    }
+
+    pub fn target_is_valid(&self, coord: &Coord) -> bool {
+        // refocusing and other actions can produce canvas events with locations outside the canvas
+        let idx = self.get_flat_ind(coord);
+        return idx < self.pixels.len();
+    }
+
+    fn get_coord(&self, coord: &Coord) -> [u8; 3] {
+        let idx = self.get_flat_ind(coord);
+        return self.pixels[idx];
+    }
+
+    fn compare_colors(&self, target: &Coord, compare: &Coord) -> bool {
+        let mut color_div_acc = 0;
+        let color_target = self.get_coord(target);
+        let color_compare = self.get_coord(compare);
+        for i in 0..color_target.len() {
+            color_div_acc += (color_target[i] as i32 - color_compare[i] as i32).abs();
+        }
+        return color_div_acc < self.max_div as i32;
+    }
+
+    fn dist_between_pnts(pnt1: &Coord, pnt2: &Coord) -> i32 {
+        sqrt((pnt1.x - pnt2.x).pow(2) as f64 + (pnt1.y - pnt2.y).pow(2) as f64) as i32
+    }
+}
 

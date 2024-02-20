@@ -62,7 +62,8 @@ pub fn create_view_turn(glob: Rc<RefCell<Game>>, mount_id:&str) -> Rc<RefCell<Vi
     };
     state.update();
     let state_ref = Rc::new(RefCell::new(state));
-
+    
+    #[allow(unused_mut)]
     state_ref.borrow().btn_next.set_state_handler(
         state_ref.clone(), |mut s:RefMut<ViewTurn> |{
             s.game_ref.borrow_mut().handle_end_turn(s.can_reinforce)

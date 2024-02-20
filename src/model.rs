@@ -149,9 +149,6 @@ impl CombatState {
         }
     }
 
-    pub(crate) fn combat_can_continue(&self)->bool{
-        todo!()
-    }
 }
 
 pub struct CombatEngine{

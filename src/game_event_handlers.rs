@@ -6,8 +6,8 @@ use crate::model::{CombatState, Coord, Rules};
 use crate::utils::structs::AttackDefendPair;
 use crate::views::info::ViewInfo;
 use crate::views::main::ViewsEnum;
+use crate::utils::consts::DISPLAY_TIMEOUT_DEFAULT_MS;
 
-const DISPLAY_TIMEOUT_DEFAULT_MS: u32 = 2000;
 
 impl Game {
     pub fn draw_board(&self) {
@@ -58,8 +58,8 @@ impl Game {
             let id_attack_from = self.state_turn.targets.attack.as_ref().unwrap();
 
             let nav_res = self.model.nav_tree.navigate_adjacent(
-                prov_id,
                 self.state_turn.targets.attack.as_ref().unwrap().clone(),
+                self.state_turn.targets.defend.as_ref().unwrap().clone(),
             );
             if nav_res.is_some() {
                 if nav_res.unwrap() {
@@ -193,7 +193,6 @@ impl Game {
             // this means that the current players turn has ended
             //todo check if a player is knocked out and skip their turn
             self.log("menu stack empty moving on to next player".to_string());
-
             if self.state_turn.in_initial_placement_phase {
                 self.army_placement_start_next(false);
             } else {

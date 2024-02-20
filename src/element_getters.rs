@@ -3,7 +3,6 @@
 use wasm_bindgen::prelude::*;
 use web_sys::{CanvasRenderingContext2d, Document, Element, HtmlButtonElement, HtmlCanvasElement, HtmlDivElement, HtmlInputElement, HtmlLabelElement, MouseEvent};
 
-
 pub fn get_html_label_by_id(id :&str) -> HtmlLabelElement{
     return get_element_by_id(id).dyn_into::<HtmlLabelElement>().map_err(|_| ())
         .unwrap();

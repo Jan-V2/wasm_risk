@@ -184,6 +184,7 @@ pub fn create_view_combat(game: Rc<RefCell<Game>>, mount_id: &str) -> Rc<RefCell
        }, "retreat btn"
     );
 
+
     return rc_view;
 }
 
