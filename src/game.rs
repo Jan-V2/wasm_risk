@@ -1,21 +1,22 @@
 use crate::model::{CombatState, Coord, Model, Player, Rules};
 use crate::syca::player_setup::PlayerConfig;
+use crate::utils::consts::DEBUG_MENU_STACK_POP;
 use crate::utils::funcs::rand_int;
-use gloo::console::log as console_log;
-use js_sys::Math::sqrt;
-use std::cell::{RefCell, RefMut};
-use std::rc::Rc;
-use gloo_timers::callback::Timeout;
-use crate::views::dice_roll::ViewDiceRoll;
-use crate::views::main::{create_view_main, ViewMain, ViewsEnum, ViewsStruct};
-use crate::views::turn::ViewTurn;
+use crate::utils::structs::AttackDefendPair;
 use crate::views::army_placement::ViewArmyPlacement;
 use crate::views::combat::ViewCombat;
+use crate::views::dice_roll::ViewDiceRoll;
 use crate::views::info::{create_view_info, ViewInfo};
-use stack_stack::{Stack, stack};
-use crate::utils::consts::DEBUG_MENU_STACK_POP;
-use crate::utils::structs::AttackDefendPair;
+use crate::views::main::{create_view_main, ViewMain, ViewsEnum, ViewsStruct};
 use crate::views::message::ViewMessage;
+use crate::views::turn::ViewTurn;
+use gloo::console::log as console_log;
+use gloo_timers::callback::Timeout;
+use js_sys::Math::sqrt;
+use marble::traits::View;
+use stack_stack::{stack, Stack};
+use std::cell::{RefCell, RefMut};
+use std::rc::Rc;
 /*
 todo start placement:
 run placement with special flag.
@@ -26,19 +27,16 @@ todo should .update omit &mut or should .show require &mut
 todo display player n's turn msg at the start of each turn
 */
 
-
-
-
 pub struct GameTurnState {
-    pub(super) targets:AttackDefendPair<Option<u32>>,
-    pub(super) active_player:u32,
+    pub(super) targets: AttackDefendPair<Option<u32>>,
+    pub(super) active_player: u32,
     pub(super) in_initial_placement_phase: bool, //
-    pub(super) in_setup:bool,
+    pub(super) in_setup: bool,
 }
 
-impl GameTurnState{
-    pub fn new()->GameTurnState{
-        GameTurnState{
+impl GameTurnState {
+    pub fn new() -> GameTurnState {
+        GameTurnState {
             targets: Default::default(),
             active_player: 0,
             in_initial_placement_phase: true,
@@ -49,7 +47,7 @@ impl GameTurnState{
 
 macro_rules! create_getter {
     ($view_name:ident, $ty:ident) => {
-        paste::paste!{
+        paste::paste! {
         impl Game{
             pub fn [<get_ $view_name>](&self)->Rc<RefCell<$ty>>{
                 self.views.as_ref().unwrap().$view_name.clone()
@@ -68,7 +66,7 @@ create_getter!(message, ViewMessage);
 #[macro_export]
 macro_rules! bind {
     ($gettter:stmt, $var_name:ident) => {
-        paste::paste!{
+        paste::paste! {
             let [<bind_ $var_name>] = $gettter;
             let $var_name = [<bind_ $var_name>].borrow();
         }
@@ -78,7 +76,7 @@ macro_rules! bind {
 #[macro_export]
 macro_rules! bind_mut {
     ($gettter:stmt, $var_name:ident) => {
-        paste::paste!{
+        paste::paste! {
             let [<bind_ $var_name>] = $gettter;
             let mut $var_name = [<bind_ $var_name>].borrow_mut();
         }
@@ -93,17 +91,17 @@ pub struct Game {
     pub state_turn: GameTurnState,
     pub view_main: Option<Rc<RefCell<ViewMain>>>,
     pub info_view: Rc<RefCell<ViewInfo>>,
-    pub views:Option<ViewsStruct>,
-    pub menu_stack:ActiveMenu,
-    pub combat_state:CombatState,
-    pub self_ref:Option<Rc<RefCell<Game>>>,
+    pub views: Option<ViewsStruct>,
+    pub menu_stack: ActiveMenu,
+    pub combat_state: CombatState,
+    pub self_ref: Option<Rc<RefCell<Game>>>,
 }
 
-
 pub struct ActiveMenu {
-    menu_stack:Vec<ViewsEnum>,
-    current:ViewsEnum,
-    debug:bool
+    menu_stack: Vec<ViewsEnum>,
+    current: ViewsEnum,
+    initialized: bool,
+    debug: bool,
 }
 
 impl ActiveMenu {
@@ -111,70 +109,84 @@ impl ActiveMenu {
     // calling pop on the ActiveMenu struct removes a menu
     // but calling self.pop_menu() inside game also loads the menu
     // ideally, you'd only have to call one place instead of multible
-    pub fn new(debug:bool)->ActiveMenu{
-        ActiveMenu{
+    pub fn new(debug: bool) -> ActiveMenu {
+        ActiveMenu {
             menu_stack: vec![],
             current: Default::default(),
+            initialized: false,
             debug,
         }
     }
-    
-    fn print_stack(&self){
+
+    fn print_stack(&self) {
         console_log!("printing stack len=", self.menu_stack.len());
         console_log!(format!("current = {:?}", self.current));
-        for item in &self.menu_stack{
+        for item in &self.menu_stack {
             console_log!("printing stack");
             console_log!(format!("{:?}\n", item));
-        } 
+        }
     }
 
-    pub fn get(&self)->ViewsEnum{
+    pub fn get(&self) -> ViewsEnum {
         self.current.clone()
     }
 
-    pub fn get_next(&mut self)->Option<ViewsEnum>{
-        if self.menu_stack.len() == 0{
+    pub fn get_next(&mut self) -> Option<ViewsEnum> {
+        if self.menu_stack.len() == 0 {
             return None;
         }
-        return Some(self.menu_stack[0].clone())
+        return Some(self.menu_stack[0].clone());
     }
 
-    pub fn get_num_queued(&self)->u32{
+    pub fn get_num_queued(&self) -> u32 {
         return self.menu_stack.len() as u32;
     }
 
-    pub fn pop(&mut self)->ViewsEnum{
+    pub fn pop(&mut self) -> ViewsEnum {
         // this assumption is that the data is already loaded into the menu,
         // and only needs to be displayed
         // this means the the previous state of the menu is restored
-        if DEBUG_MENU_STACK_POP{
-            console_log!(format!("Debug: menu stack pre pop {:?}", self.menu_stack))
+        if DEBUG_MENU_STACK_POP {
+            console_log!(format!("Debug: menu stack pre pop {:?}", self.menu_stack));
+            console_log!(format!("Debug: current pre pop {:?}", self.current));
         }
-        if self.menu_stack.is_empty(){
-            panic!("can't pop menu stack, stack empty. current menu {:?}", self.current)
+        if self.menu_stack.is_empty() {
+            panic!(
+                "can't pop menu stack, stack empty. current menu {:?}",
+                self.current
+            )
         }
         self.current = self.menu_stack.pop().unwrap();
+        if DEBUG_MENU_STACK_POP {
+            console_log!(format!("Debug: menu stack post pop {:?}", self.menu_stack));
+            console_log!(format!("Debug: current post pop {:?}", self.current));
+        }
         self.get()
     }
 
-    pub fn push(&mut self, menu:ViewsEnum){
-        if self.debug{
-            console_log!(format!("pushing {:?}", menu));
-            self.print_stack();
-        } 
-        self.menu_stack.push(self.current.clone());
+    pub fn push(&mut self, menu: ViewsEnum) {
+        if self.initialized {
+            self.menu_stack.push(self.current.clone());
+        } else {
+            // overwrite current on first push, so current does not need to be an option
+            self.initialized = true;
+        }
         self.current = menu;
+        if self.debug {
+            console_log!(format!("pushed {:?} to stack", self.current));
+            self.print_stack();
+        }
     }
 
-    pub fn is_empty(&self)->bool{
+    pub fn is_empty(&self) -> bool {
         self.menu_stack.is_empty()
     }
 
-    pub fn set_current(&mut self, view:ViewsEnum){
-        if self.debug{
+    pub fn set_current(&mut self, view: ViewsEnum) {
+        if self.debug {
             console_log!(format!("setting current {:?}", view));
             self.print_stack();
-        } 
+        }
         self.current = view;
     }
 }
@@ -196,7 +208,7 @@ impl Game {
         };
     }
 
-    pub fn pop_menu_async(&self, time_ms:u32){
+    pub fn pop_menu_async(&self, time_ms: u32) {
         let game_ref = self.self_ref.as_ref().unwrap().clone();
         let t = Timeout::new(time_ms, move || {
             game_ref.borrow_mut().pop_menu();
@@ -205,32 +217,40 @@ impl Game {
         t.forget();
     }
 
-/*
-    pub(super) fn apply_combat_result_to_map(&mut self, state_combat: &StateCombat) {
-        self.log("combat finished handler".to_string());
-        let mut prov_attack = (*self.model.get_prov_from_id(
-            &state_combat.prov_id_attacker).unwrap()).clone();
-        let mut prov_defend  = (*self.model.get_prov_from_id(
-            &state_combat.prov_id_defender).unwrap()).clone();
-
-        if state_combat.armies_defending == 0 && state_combat.armies_attacking > 0{
-            // attacker won
-            self.log("attack succeeded".to_string());
-            prov_attack.army_count = 1;
-            prov_defend.army_count = state_combat.armies_attacking;
-            prov_defend.owner_id = prov_attack.owner_id;
-        }else {
-            // attack ongoing or failed
-            self.log("attack failed".to_string());
-            prov_attack.army_count = 1 + state_combat.armies_attacking; prov_defend.army_count = state_combat.armies_defending;
+    pub fn pop_menu(&mut self) {
+        if self.menu_stack.is_empty() {
+            // this means that the current players turn has ended
+            //todo check if a player is knocked out and skip their turn
+            self.log("menu stack empty moving on to next player".to_string());
+            if self.state_turn.in_initial_placement_phase {
+                self.army_placement_start_next(false);
+            } else {
+                self.setup_next_turn();
+            }
+            self.activate_current_menu();
+        } else {
+            let _ = self.menu_stack.pop();
+            self.activate_current_menu();
         }
-        self.log(format!("{:?}", prov_attack));
-        self.model.set_prov(prov_attack);
-        self.model.set_prov(prov_defend);
-        self.draw_board();
     }
-*/
-    pub fn handle_canvas_noop(&mut self, state : ViewsEnum){
+
+    /*
+       pub(super) fn apply_combat_result_to_map(&mut self, state_combat: &StateCombat) {
+       self.log("combat finished handler".to_string()); let mut prov_attack =
+       (*self.model.get_prov_from_id( &state_combat.prov_id_attacker).unwrap()).clone(); let mut
+       prov_defend  = (*self.model.get_prov_from_id(
+       &state_combat.prov_id_defender).unwrap()).clone();
+
+       if state_combat.armies_defending == 0 && state_combat.armies_attacking > 0{
+    // attacker won self.log("attack succeeded".to_string()); prov_attack.army_count = 1;
+    // prov_defend.army_count = state_combat.armies_attacking; prov_defend.owner_id =
+    // prov_attack.owner_id; }else { attack ongoing or failed self.log("attack
+    // failed".to_string()); prov_attack.army_count = 1 + state_combat.armies_attacking;
+    // prov_defend.army_count = state_combat.armies_defending; } self.log(format!("{:?}",
+    // prov_attack)); self.model.set_prov(prov_attack); self.model.set_prov(prov_defend);
+    // self.draw_board(); }
+    */
+    pub fn handle_canvas_noop(&mut self, state: ViewsEnum) {
         self.log(format!("in state: {:?} the canvas is not handled", state))
     }
 
@@ -250,12 +270,12 @@ impl Game {
     }
 
     pub(super) fn set_armies_in_prov(&mut self, num_armies: u32, prov_id: &u32) {
-        let prov = self.model
+        let prov = self
+            .model
             .get_prov_from_id_mut(prov_id)
             .expect(format!("prov with id {} could not be found", prov_id).as_str());
         prov.army_count = num_armies;
     }
-
 
     pub(super) fn assign_provs_random(&mut self) {
         gloo::console::log!(format!("players len = {}", self.model.get_player_count()));
@@ -292,65 +312,63 @@ impl Game {
         }
     }
 
-
-
-
-    pub fn show_message(&mut self, _label:String){
+    pub fn show_message(&mut self, _label: String) {
         // todo add view that just shows a message
-/*        self.ui_man.view_label.update(StateLabel{
-            label_text: label, return_state:  next_state.clone()});
+        /*        self.ui_man.view_label.update(StateLabel{
+        label_text: label, return_state:  next_state.clone()});
         self.set_ui_state(UiState::LABEL);*/
     }
-/*
-    pub(super) fn set_ui_state(&mut self, state: UiState) {
-        self.state_turn.attack_target = None;
-        self.ui_man.select_view(&state);
-        self.config_sig.unwrap().ui_state.set(state.clone());
-        match state {
-            UiState::SETUP => {self.info_display_div.set_default(
-                "".to_string())}
-            UiState::ARMY_PLACEMENT | UiState::ARMY_PLACEMENT_START => {
-            self.info_display_div.set_default(
-                "Click on your own provinces to place your armies".to_string())}
-            UiState::TURN => {
-                self.info_display_div.set_default(
-                "Click on your own province to attack from there, or press end turn".to_string())}
-            UiState::MOVE => {todo!()}
-            UiState::COMBAT => {self.info_display_div.set_default(
-                "Select the number of armies you want to use and click attack/defend".to_string())}
-            UiState::DICE_ROLL => {self.info_display_div.set_default(
-                "".to_string())}
-            UiState::GAME_END => {self.info_display_div.set_default(
-                "Game Over".to_string())}
-            UiState::CARD_SELECT => {todo!()}
-            UiState::LABEL => {
-                self.info_display_div.set_default("".to_string())
-            }
-        }
-    }
-*/
-    
+    /*
+       pub(super) fn set_ui_state(&mut self, state: UiState) { self.state_turn.attack_target =
+       None; self.ui_man.select_view(&state); self.config_sig.unwrap().ui_state.set(state.clone());
+       match state { UiState::SETUP => {self.info_display_div.set_default( "".to_string())}
+       UiState::ARMY_PLACEMENT | UiState::ARMY_PLACEMENT_START => {
+       self.info_display_div.set_default( "Click on your own provinces to place your
+       armies".to_string())} UiState::TURN => { self.info_display_div.set_default( "Click on your
+       own province to attack from there, or press end turn".to_string())} UiState::MOVE =>
+       {todo!()} UiState::COMBAT => {self.info_display_div.set_default( "Select the number of
+       armies you want to use and click attack/defend".to_string())} UiState::DICE_ROLL =>
+       {self.info_display_div.set_default( "".to_string())} UiState::GAME_END =>
+       {self.info_display_div.set_default( "Game Over".to_string())} UiState::CARD_SELECT =>
+       {todo!()} UiState::LABEL => { self.info_display_div.set_default("".to_string()) } } }
+    */
 
-    pub fn push_and_activate_menu(&mut self, menu:ViewsEnum){
+    pub fn push_and_activate_menu(&mut self, menu: ViewsEnum) {
         self.menu_stack.push(menu);
         self.activate_current_menu();
     }
 
-    pub fn activate_current_menu(&mut self){
+    pub fn activate_current_menu(&mut self) {
         let current_menu = self.menu_stack.get();
         match current_menu {
             ViewsEnum::Turn => {
-                bind!(self.get_turn(), turn);
+                bind_mut!(self.get_turn(), turn);
+                turn.update();
             }
-
-            ViewsEnum::ArmyPlacement => {}
-            ViewsEnum::Combat => {}
-            ViewsEnum::DiceRolls => {}
-            ViewsEnum::Message => {}
+            ViewsEnum::ArmyPlacement => {
+                bind_mut!(self.get_army_placement(), view);
+                view.update();
+            }
+            ViewsEnum::Combat => {
+                bind_mut!(self.get_combat(), view);
+                view.update();
+            }
+            ViewsEnum::DiceRolls => {
+                bind_mut!(self.get_dice_rolls(), view);
+                view.update();
+            }
+            ViewsEnum::Message => {
+                bind_mut!(self.get_message(), view);
+                view.update();
+            }
+            ViewsEnum::Next_Turn => {
+                panic!("next turn menu can't be activated?")
+            }
         }
-        self.get_view_main().borrow().set_active(self.menu_stack.get());
+        self.get_view_main()
+            .borrow()
+            .set_active(self.menu_stack.get());
     }
-
 
     pub fn lookup_coord(&self, clicked_coord: &Coord) -> Option<u32> {
         let mut found_at_idx: Vec<i32> = Vec::new();
@@ -423,20 +441,20 @@ impl Game {
             self.model.get_name_from_prov_id(&prov_id.unwrap())
         } else {
             None
-        }
+        };
     }
 
-    pub fn create_views(&mut self, self_ref: Rc<RefCell<Game>>, mount_id:&str) {
+    pub fn create_views(&mut self, self_ref: Rc<RefCell<Game>>, mount_id: &str) {
         self.self_ref = Some(self_ref.clone());
-        self.view_main  = Some(create_view_main(self_ref.clone(), mount_id));
+        self.view_main = Some(create_view_main(self_ref.clone(), mount_id));
         self.views = Some(self.get_view_main().borrow().views.clone());
         bind!(self.get_view_main(), view_main);
         view_main.hide_all();
     }
 
-    pub(super) fn get_view_main(&self)-> Rc<RefCell<ViewMain>>{
+    pub(super) fn get_view_main(&self) -> Rc<RefCell<ViewMain>> {
         let ret = self.view_main.as_ref();
-        if ret.is_none(){
+        if ret.is_none() {
             panic!("can't access main_view, not set")
         }
         ret.unwrap().clone()
@@ -479,4 +497,3 @@ impl ProvLookupTable {
         sqrt((pnt1.x - pnt2.x).pow(2) as f64 + (pnt1.y - pnt2.y).pow(2) as f64) as i32
     }
 }
-

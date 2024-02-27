@@ -20,6 +20,7 @@ pub enum ViewsEnum {
     Combat,
     DiceRolls,
     Message,
+    Next_Turn,
 }
 
 #[derive(Clone)]
@@ -88,6 +89,7 @@ impl ViewMain {
                     ViewsEnum::Combat => { self.views.combat.borrow().show() }
                     ViewsEnum::DiceRolls => { self.views.dice_rolls.borrow().show() }
                     ViewsEnum::Message => { self.views.message.borrow().show() }
+                    ViewsEnum::Next_Turn => {  }
                 }
             } else {
                 match _view {
@@ -96,6 +98,7 @@ impl ViewMain {
                     ViewsEnum::Combat => { self.views.combat.borrow().hide() }
                     ViewsEnum::DiceRolls => { self.views.dice_rolls.borrow().hide() }
                     ViewsEnum::Message => { self.views.message.borrow().hide() }
+                    ViewsEnum::Next_Turn => {  }
                 }
             }
         }
@@ -109,6 +112,7 @@ impl ViewMain {
                 ViewsEnum::Combat => { self.views.combat.borrow().hide() }
                 ViewsEnum::DiceRolls => { self.views.dice_rolls.borrow().hide() }
                 ViewsEnum::Message => { self.views.message.borrow().hide() }
+                ViewsEnum::Next_Turn => {  }
             }
         }
     }

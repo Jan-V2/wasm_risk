@@ -9,6 +9,15 @@ use crate::views::main::ViewsEnum;
 use crate::utils::consts::DISPLAY_TIMEOUT_DEFAULT_MS;
 
 
+/* todos:
+ * clarify the design of the stack system
+ * make it so that new menu is selected at stack pop
+ * make combat work
+ * add win conditions
+ * add cards
+ * end screen
+ * */
+
 impl Game {
     pub fn draw_board(&self) {
         if self.model.players.len() > 0 {
@@ -36,6 +45,7 @@ impl Game {
                 ViewsEnum::Combat => { self.handle_canvas_noop(ViewsEnum::Combat) }
                 ViewsEnum::DiceRolls => { self.handle_canvas_noop(ViewsEnum::DiceRolls) }
                 ViewsEnum::Message => {self.handle_canvas_noop(ViewsEnum::Message)}
+                ViewsEnum::Next_Turn => {panic!("next turn menu can't be activated?")  }
             }
         }
     }
@@ -150,7 +160,7 @@ impl Game {
                     Rules::armies_per_players_start(self.model.get_player_count()).unwrap();
                 let placeable_armies = armies_per_player -
                     self.model.get_prov_count_owned_by_player(self.state_turn.active_player);
-                self.push_army_placement(placeable_armies);
+                self.push_army_placement(placeable_armies, self.state_turn.active_player);
                 self.activate_current_menu();
             }
             if from_setup {
@@ -188,26 +198,12 @@ impl Game {
         self.menu_stack.push(ViewsEnum::Message)
     }
 
-    pub fn pop_menu(&mut self) {
-        if self.menu_stack.is_empty() {
-            // this means that the current players turn has ended
-            //todo check if a player is knocked out and skip their turn
-            self.log("menu stack empty moving on to next player".to_string());
-            if self.state_turn.in_initial_placement_phase {
-                self.army_placement_start_next(false);
-            } else {
-                self.setup_next_turn();
-            }
-            self.activate_current_menu();
-        } else {
-            let _ = self.menu_stack.pop();
-            self.activate_current_menu();
-        }
-    }
+    
 
-    pub fn push_army_placement(&mut self, armies: u32) {
+    pub fn push_army_placement(&mut self, armies: u32, player_id:u32) {
         bind_mut!(self.get_army_placement(), menu);
         menu.armies = armies;
+        menu.player_id = player_id;
         self.menu_stack.push(ViewsEnum::ArmyPlacement);
     }
 
@@ -235,11 +231,10 @@ impl Game {
 
         let extra_armies = self.model.get_player_continent_armies(&active_player);
         if extra_armies > 0 {
-            self.push_army_placement(extra_armies);
+            self.push_army_placement(extra_armies, self.state_turn.active_player);
             self.push_message_view(format!("you get to place {extra_armies} \
                 extra armies, because you control continents."));
         }
-
     }
 
     pub fn handle_message_next(&mut self){
@@ -360,4 +355,6 @@ impl Game {
         turn.can_reinforce = false;
         self.pop_menu();
     }
+
+
 }
