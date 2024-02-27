@@ -17,6 +17,8 @@ use marble::traits::View;
 use stack_stack::{stack, Stack};
 use std::cell::{RefCell, RefMut};
 use std::rc::Rc;
+use crate::{bind, bind_mut};
+
 /*
 todo start placement:
 run placement with special flag.
@@ -63,25 +65,7 @@ create_getter!(combat, ViewCombat);
 create_getter!(dice_rolls, ViewDiceRoll);
 create_getter!(message, ViewMessage);
 
-#[macro_export]
-macro_rules! bind {
-    ($gettter:stmt, $var_name:ident) => {
-        paste::paste! {
-            let [<bind_ $var_name>] = $gettter;
-            let $var_name = [<bind_ $var_name>].borrow();
-        }
-    };
-}
 
-#[macro_export]
-macro_rules! bind_mut {
-    ($gettter:stmt, $var_name:ident) => {
-        paste::paste! {
-            let [<bind_ $var_name>] = $gettter;
-            let mut $var_name = [<bind_ $var_name>].borrow_mut();
-        }
-    };
-}
 
 pub struct Game {
     pub model: Model,
@@ -91,105 +75,11 @@ pub struct Game {
     pub state_turn: GameTurnState,
     pub view_main: Option<Rc<RefCell<ViewMain>>>,
     pub info_view: Rc<RefCell<ViewInfo>>,
-    pub views: Option<ViewsStruct>,
-    pub menu_stack: ActiveMenu,
     pub combat_state: CombatState,
     pub self_ref: Option<Rc<RefCell<Game>>>,
 }
 
-pub struct ActiveMenu {
-    menu_stack: Vec<ViewsEnum>,
-    current: ViewsEnum,
-    initialized: bool,
-    debug: bool,
-}
 
-impl ActiveMenu {
-    // todo clean up the api
-    // calling pop on the ActiveMenu struct removes a menu
-    // but calling self.pop_menu() inside game also loads the menu
-    // ideally, you'd only have to call one place instead of multible
-    pub fn new(debug: bool) -> ActiveMenu {
-        ActiveMenu {
-            menu_stack: vec![],
-            current: Default::default(),
-            initialized: false,
-            debug,
-        }
-    }
-
-    fn print_stack(&self) {
-        console_log!("printing stack len=", self.menu_stack.len());
-        console_log!(format!("current = {:?}", self.current));
-        for item in &self.menu_stack {
-            console_log!("printing stack");
-            console_log!(format!("{:?}\n", item));
-        }
-    }
-
-    pub fn get(&self) -> ViewsEnum {
-        self.current.clone()
-    }
-
-    pub fn get_next(&mut self) -> Option<ViewsEnum> {
-        if self.menu_stack.len() == 0 {
-            return None;
-        }
-        return Some(self.menu_stack[0].clone());
-    }
-
-    pub fn get_num_queued(&self) -> u32 {
-        return self.menu_stack.len() as u32;
-    }
-
-    pub fn pop(&mut self) -> ViewsEnum {
-        // this assumption is that the data is already loaded into the menu,
-        // and only needs to be displayed
-        // this means the the previous state of the menu is restored
-        if DEBUG_MENU_STACK_POP {
-            console_log!(format!("Debug: menu stack pre pop {:?}", self.menu_stack));
-            console_log!(format!("Debug: current pre pop {:?}", self.current));
-        }
-        if self.menu_stack.is_empty() {
-            panic!(
-                "can't pop menu stack, stack empty. current menu {:?}",
-                self.current
-            )
-        }
-        self.current = self.menu_stack.pop().unwrap();
-        if DEBUG_MENU_STACK_POP {
-            console_log!(format!("Debug: menu stack post pop {:?}", self.menu_stack));
-            console_log!(format!("Debug: current post pop {:?}", self.current));
-        }
-        self.get()
-    }
-
-    pub fn push(&mut self, menu: ViewsEnum) {
-        if self.initialized {
-            self.menu_stack.push(self.current.clone());
-        } else {
-            // overwrite current on first push, so current does not need to be an option
-            self.initialized = true;
-        }
-        self.current = menu;
-        if self.debug {
-            console_log!(format!("pushed {:?} to stack", self.current));
-            self.print_stack();
-        }
-    }
-
-    pub fn is_empty(&self) -> bool {
-        self.menu_stack.is_empty()
-    }
-
-    pub fn set_current(&mut self, view: ViewsEnum) {
-        if self.debug {
-            console_log!(format!("setting current {:?}", view));
-            self.print_stack();
-        }
-        self.current = view;
-    }
-}
 
 impl Game {
     pub fn new(prov_lookup: ProvLookupTable, use_logging: bool) -> Game {
@@ -201,8 +91,6 @@ impl Game {
             state_turn: GameTurnState::new(),
             view_main: None,
             info_view: create_view_info("text_out", "setup".to_string()),
-            views: None,
-            menu_stack: ActiveMenu::new(true),
             combat_state: CombatState::default(),
             self_ref: None,
         };
@@ -250,10 +138,6 @@ impl Game {
     // prov_attack)); self.model.set_prov(prov_attack); self.model.set_prov(prov_defend);
     // self.draw_board(); }
     */
-    pub fn handle_canvas_noop(&mut self, state: ViewsEnum) {
-        self.log(format!("in state: {:?} the canvas is not handled", state))
-    }
-
     pub(super) fn change_armies_in_prov(&mut self, num_armies: i32, prov_id: &u32) {
         let prov = self
             .model

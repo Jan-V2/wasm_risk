@@ -3,6 +3,7 @@
 
 
 mod element_getters;
+mod event_controller;
 mod canvas;
 mod model;
 mod game;
