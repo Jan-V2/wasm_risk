@@ -7,6 +7,7 @@ use crate::utils::structs::AttackDefendPair;
 use crate::views::info::ViewInfo;
 use crate::views::main::ViewsEnum;
 use crate::utils::consts::DISPLAY_TIMEOUT_DEFAULT_MS;
+use crate::event_controller::EventReciever;
 
 
 /* todos:
@@ -18,37 +19,8 @@ use crate::utils::consts::DISPLAY_TIMEOUT_DEFAULT_MS;
  * end screen
  * */
 
-impl Game {
-    pub fn draw_board(&self) {
-        if self.model.players.len() > 0 {
-            crate::canvas::redraw_board_state(&self.model, self.flag_scale, true);
-        } else {
-            crate::canvas::redraw_board_state(&self.model, self.flag_scale, false);
-        }
-    }
 
-    pub fn display_default_ms(&mut self, msg: &String) {
-        let mut view_info = self.info_view.borrow_mut();
-        view_info.display_with_timeout(msg, DISPLAY_TIMEOUT_DEFAULT_MS);
-    }
-
-    pub fn handle_canvas_click(&mut self, clicked_coord: Coord) {
-        if self.state_turn.in_setup {
-            return;
-        }
-        let prov_id_opt = self.lookup_coord(&clicked_coord);
-        if prov_id_opt.is_some() {
-            let prov_id = prov_id_opt.unwrap();
-            match self.menu_stack.get() {
-                ViewsEnum::Turn => { self.handle_canvas_turn(prov_id) }
-                ViewsEnum::ArmyPlacement => { self.handle_canvas_army_placement(prov_id) }
-                ViewsEnum::Combat => { self.handle_canvas_noop(ViewsEnum::Combat) }
-                ViewsEnum::DiceRolls => { self.handle_canvas_noop(ViewsEnum::DiceRolls) }
-                ViewsEnum::Message => {self.handle_canvas_noop(ViewsEnum::Message)}
-                ViewsEnum::Next_Turn => {panic!("next turn menu can't be activated?")  }
-            }
-        }
-    }
+impl EventReciever for Game{
 
     fn handle_canvas_turn(&mut self, prov_id: u32) {
         if self.is_owned_by_active(&prov_id) {
@@ -99,7 +71,6 @@ impl Game {
         self.log("turn".to_string())
     }
 
-
     fn handle_canvas_army_placement(&mut self, prov_id: u32) {
         // handles the canvas click event for amry placement, then pops the stack
         self.log("handling canvas army placement".to_string());
@@ -136,40 +107,14 @@ impl Game {
             self.pop_menu()
         }
     }
+    
 
-    pub fn handle_canvas_move(&mut self, _prov_id: u32) {
+    fn handle_canvas_move(&mut self, _prov_id: u32) {
         todo!()
     }
+    
 
-
-    pub fn army_placement_start_next(&mut self, from_setup: bool) {
-        self.log("in initial placement phase".to_string());
-        if self.state_turn.active_player == self.model.get_player_count() - 1 {
-            self.log("done full cycle, resetting".to_string());
-            self.state_turn.in_initial_placement_phase = false;
-            self.pop_menu();
-        } else {
-            if !from_setup {
-                self.state_turn.active_player += 1;
-            }
-            self.log(format!("setting up placement for player {}",
-                             self.state_turn.active_player));
-
-            {
-                let armies_per_player =
-                    Rules::armies_per_players_start(self.model.get_player_count()).unwrap();
-                let placeable_armies = armies_per_player -
-                    self.model.get_prov_count_owned_by_player(self.state_turn.active_player);
-                self.push_army_placement(placeable_armies, self.state_turn.active_player);
-                self.activate_current_menu();
-            }
-            if from_setup {
-                self.activate_current_menu();// borrows army placement
-            }
-        }
-    }
-
-    pub fn handle_end_turn(&mut self, can_reinforce:bool){
+    fn handle_end_turn(&mut self, can_reinforce:bool){
         if can_reinforce{
             console_log!("handling player reinforce");
             bind_mut!(self.get_army_placement(), placement_menu);
@@ -191,58 +136,8 @@ impl Game {
         self.pop_menu_async(1);
     }
 
-
-    pub fn push_message_view(&mut self, msg:String){
-        bind_mut!(self.get_message(), msg_menu);
-        msg_menu.message = msg;
-        self.menu_stack.push(ViewsEnum::Message)
-    }
-
     
-
-    pub fn push_army_placement(&mut self, armies: u32, player_id:u32) {
-        bind_mut!(self.get_army_placement(), menu);
-        menu.armies = armies;
-        menu.player_id = player_id;
-        self.menu_stack.push(ViewsEnum::ArmyPlacement);
-    }
-
-    pub fn setup_next_turn(&mut self) {
-        // check if a player owns a continent
-        self.log("setting up next turn".to_string());
-
-        // select next player
-        //todo skip over players that have been defeated
-        let prev_player = self.state_turn.active_player;
-        self.state_turn.active_player = if prev_player + 1
-            < self.model.players.len() as u32 {
-            prev_player + 1
-        } else {
-            0
-        };
-
-        self.info_view.borrow_mut().set_default(
-            &format!("Player {}'s turn", self.state_turn.active_player));
-
-        bind_mut!(self.get_turn(), turn_menu);
-        let active_player = self.state_turn.active_player;
-        turn_menu.reset(active_player);
-        self.menu_stack.push(ViewsEnum::Turn);
-
-        let extra_armies = self.model.get_player_continent_armies(&active_player);
-        if extra_armies > 0 {
-            self.push_army_placement(extra_armies, self.state_turn.active_player);
-            self.push_message_view(format!("you get to place {extra_armies} \
-                extra armies, because you control continents."));
-        }
-    }
-
-    pub fn handle_message_next(&mut self){
-        self.pop_menu();
-    }
-
-
-    pub fn handle_ui_combat_roll(&mut self, is_attack: bool) {
+    fn handle_ui_combat_roll(&mut self, is_attack: bool) {
         self.log("combat syca handle".to_string());
         bind_mut!(self.get_combat(), combat_view);
         //bind_mut!(self.get_combat(), combat_view);
@@ -289,7 +184,8 @@ impl Game {
         }
     }
 
-    pub fn handle_ui_dice_next(&mut self) {
+    
+    fn handle_ui_dice_next(&mut self) {
         todo!()
         /*        self.log("dice roll handler".to_string());
                 let mut combat_result = self.ui_man.dice_rolls.get();
@@ -331,30 +227,109 @@ impl Game {
     }
 
 
-
-    pub fn apply_combat_res_to_map(&mut self) {
-        self.combat_state.apply_losses();
-        let provs = self.combat_state.prov_id.clone();
-        let armies = self.combat_state.armies.clone();
-        if self.combat_state.attacker_has_won() {
-            self.set_armies_in_prov(1, &provs.attack);
-            self.set_armies_in_prov(armies.attack - 1, &provs.defend);
-            let new_owner = self.model.get_owner_from_prov_id(&provs.attack).unwrap();
-            let conquered_prov = self.model
-                .get_prov_from_id_mut(&provs.defend).unwrap();
-            conquered_prov.owner_id = new_owner;
-        } else {
-            self.set_armies_in_prov(armies.attack, &provs.attack);
-            self.set_armies_in_prov(armies.defend, &provs.defend);
-        }
-    }
-
-    pub fn handle_ui_retreat(&mut self) {
+    fn handle_ui_retreat(&mut self) {
         self.log("retreat handle".to_string());
         bind_mut!(self.get_turn(), turn);
         turn.can_reinforce = false;
         self.pop_menu();
     }
+}
+
+impl Game {
+    pub fn draw_board(&self) {
+        if self.model.players.len() > 0 {
+            crate::canvas::redraw_board_state(&self.model, self.flag_scale, true);
+        } else {
+            crate::canvas::redraw_board_state(&self.model, self.flag_scale, false);
+        }
+    }
+
+    
+    fn setup_next_turn(&mut self) {
+        // check if a player owns a continent
+        self.log("setting up next turn".to_string());
+
+        // select next player
+        //todo skip over players that have been defeated
+        let prev_player = self.state_turn.active_player;
+        self.state_turn.active_player = if prev_player + 1
+            < self.model.players.len() as u32 {
+            prev_player + 1
+        } else {
+            0
+        };
+
+        self.info_view.borrow_mut().set_default(
+            &format!("Player {}'s turn", self.state_turn.active_player));
+
+        bind_mut!(self.get_turn(), turn_menu);
+        let active_player = self.state_turn.active_player;
+        turn_menu.reset(active_player);
+        self.menu_stack.push(ViewsEnum::Turn);
+
+        let extra_armies = self.model.get_player_continent_armies(&active_player);
+        if extra_armies > 0 {
+            self.push_army_placement(extra_armies, self.state_turn.active_player);
+            self.push_message_view(format!("you get to place {extra_armies} \
+                extra armies, because you control continents."));
+        }
+    }
+
+
+
+    pub fn display_default_ms(&mut self, msg: &String) {
+        let mut view_info = self.info_view.borrow_mut();
+        view_info.display_with_timeout(msg, DISPLAY_TIMEOUT_DEFAULT_MS);
+    }
+
+    pub fn handle_canvas_click(&mut self, clicked_coord: Coord) {
+        if self.state_turn.in_setup {
+            return;
+        }
+        let prov_id_opt = self.lookup_coord(&clicked_coord);
+        if prov_id_opt.is_some() {
+            let prov_id = prov_id_opt.unwrap();
+            match self.menu_stack.get() {
+                ViewsEnum::Turn => { self.handle_canvas_turn(prov_id) }
+                ViewsEnum::ArmyPlacement => { self.handle_canvas_army_placement(prov_id) }
+                ViewsEnum::Combat => { self.handle_canvas_noop(ViewsEnum::Combat) }
+                ViewsEnum::DiceRolls => { self.handle_canvas_noop(ViewsEnum::DiceRolls) }
+                ViewsEnum::Message => {self.handle_canvas_noop(ViewsEnum::Message)}
+                ViewsEnum::Next_Turn => {panic!("next turn menu can't be activated?")  }
+            }
+        }
+    }
+
+
+    // gets called inside handler
+    pub fn army_placement_start_next(&mut self, from_setup: bool) {
+        self.log("in initial placement phase".to_string());
+        if self.state_turn.active_player == self.model.get_player_count() - 1 {
+            self.log("done full cycle, resetting".to_string());
+            self.state_turn.in_initial_placement_phase = false;
+            self.pop_menu();
+        } else {
+            if !from_setup {
+                self.state_turn.active_player += 1;
+            }
+            self.log(format!("setting up placement for player {}",
+                             self.state_turn.active_player));
+
+            {
+                let armies_per_player =
+                    Rules::armies_per_players_start(self.model.get_player_count()).unwrap();
+                let placeable_armies = armies_per_player -
+                    self.model.get_prov_count_owned_by_player(self.state_turn.active_player);
+                self.push_army_placement(placeable_armies, self.state_turn.active_player);
+                self.activate_current_menu();
+            }
+            if from_setup {
+                self.activate_current_menu();// borrows army placement
+            }
+        }
+    }
+
+    
 
 
 }

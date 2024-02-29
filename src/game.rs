@@ -18,6 +18,8 @@ use stack_stack::{stack, Stack};
 use std::cell::{RefCell, RefMut};
 use std::rc::Rc;
 use crate::{bind, bind_mut};
+use crate::event_controller::EventReciever;
+
 
 /*
 todo start placement:
@@ -77,6 +79,7 @@ pub struct Game {
     pub info_view: Rc<RefCell<ViewInfo>>,
     pub combat_state: CombatState,
     pub self_ref: Option<Rc<RefCell<Game>>>,
+    pub event_reciever:Rc<RefCell<EventReciever>>,
 }
 
 
@@ -96,6 +99,8 @@ impl Game {
         };
     }
 
+    // pops menu after timer for borrowing reasons
+    // very janky indeed
     pub fn pop_menu_async(&self, time_ms: u32) {
         let game_ref = self.self_ref.as_ref().unwrap().clone();
         let t = Timeout::new(time_ms, move || {
@@ -105,6 +110,7 @@ impl Game {
         t.forget();
     }
 
+    // pops a menu from the stack
     pub fn pop_menu(&mut self) {
         if self.menu_stack.is_empty() {
             // this means that the current players turn has ended
@@ -138,6 +144,8 @@ impl Game {
     // prov_attack)); self.model.set_prov(prov_attack); self.model.set_prov(prov_defend);
     // self.draw_board(); }
     */
+    
+    // adds or removes armies from a province, checking for 0
     pub(super) fn change_armies_in_prov(&mut self, num_armies: i32, prov_id: &u32) {
         let prov = self
             .model
@@ -153,6 +161,7 @@ impl Game {
         }
     }
 
+    // sets the army count in a province
     pub(super) fn set_armies_in_prov(&mut self, num_armies: u32, prov_id: &u32) {
         let prov = self
             .model
@@ -161,6 +170,7 @@ impl Game {
         prov.army_count = num_armies;
     }
 
+    // used in setup to assign armies randomly for testing
     pub(super) fn assign_provs_random(&mut self) {
         gloo::console::log!(format!("players len = {}", self.model.get_player_count()));
         let player_count = self.model.get_player_count() as usize;
@@ -190,6 +200,7 @@ impl Game {
         }
     }
 
+    // prints to console if self.logging is set
     pub(super) fn log(&self, msg: String) {
         if self.logging {
             console_log!(msg)
@@ -217,43 +228,8 @@ impl Game {
        {todo!()} UiState::LABEL => { self.info_display_div.set_default("".to_string()) } } }
     */
 
-    pub fn push_and_activate_menu(&mut self, menu: ViewsEnum) {
-        self.menu_stack.push(menu);
-        self.activate_current_menu();
-    }
 
-    pub fn activate_current_menu(&mut self) {
-        let current_menu = self.menu_stack.get();
-        match current_menu {
-            ViewsEnum::Turn => {
-                bind_mut!(self.get_turn(), turn);
-                turn.update();
-            }
-            ViewsEnum::ArmyPlacement => {
-                bind_mut!(self.get_army_placement(), view);
-                view.update();
-            }
-            ViewsEnum::Combat => {
-                bind_mut!(self.get_combat(), view);
-                view.update();
-            }
-            ViewsEnum::DiceRolls => {
-                bind_mut!(self.get_dice_rolls(), view);
-                view.update();
-            }
-            ViewsEnum::Message => {
-                bind_mut!(self.get_message(), view);
-                view.update();
-            }
-            ViewsEnum::Next_Turn => {
-                panic!("next turn menu can't be activated?")
-            }
-        }
-        self.get_view_main()
-            .borrow()
-            .set_active(self.menu_stack.get());
-    }
-
+    // returns provid of the clicked xy coord if found
     pub fn lookup_coord(&self, clicked_coord: &Coord) -> Option<u32> {
         let mut found_at_idx: Vec<i32> = Vec::new();
 
@@ -291,6 +267,7 @@ impl Game {
         }
     }
 
+    // returns true if the active player owns the provided provid
     pub(super) fn is_owned_by_active(&self, prov_id: &u32) -> bool {
         let owner = self.model.get_owner_from_prov_id(prov_id);
         if owner.is_some() {
@@ -299,6 +276,7 @@ impl Game {
         false
     }
 
+    // recieves the config info from the sycamore ui
     pub fn set_player_config(&mut self, config: PlayerConfig) {
         gloo::console::log!(format!("player count = {}", config.player_count));
         gloo::console::log!(format!("{:?}", config));
@@ -319,6 +297,8 @@ impl Game {
         self.draw_board();
     }
 
+    // generates the string that is shown when the mouse hovers on the canvas
+    // currently only used the show the prov name
     pub fn get_prov_mouseover_string(&self, coord: &Coord) -> Option<String> {
         let prov_id = self.lookup_coord(coord);
         return if prov_id.is_some() {
@@ -328,6 +308,7 @@ impl Game {
         };
     }
 
+    //creates the views at setup and mounts them to the dom
     pub fn create_views(&mut self, self_ref: Rc<RefCell<Game>>, mount_id: &str) {
         self.self_ref = Some(self_ref.clone());
         self.view_main = Some(create_view_main(self_ref.clone(), mount_id));
@@ -336,6 +317,8 @@ impl Game {
         view_main.hide_all();
     }
 
+    // getter for the main view.
+    // this is not done in a macro because it's stored differently
     pub(super) fn get_view_main(&self) -> Rc<RefCell<ViewMain>> {
         let ret = self.view_main.as_ref();
         if ret.is_none() {

@@ -33,6 +33,16 @@ macro_rules! bind_mut {
     };
 }
 
+
+/* todos:
+ * refactor events into using enums with values?
+ * refactor event reciever and stack controller into sperate objects
+ *      the event flow needs to be one way for borrowing reasons
+ * route all events to this object
+ * route events from this obj to game
+ * create tests
+ * */
+
 struct EventController{
 
     
@@ -69,14 +79,32 @@ impl EventController{
         self.log(format!("in state: {:?} the canvas is not handled", state))
     }
 
+    pub fn push_message_view(&mut self, msg:String){
+        bind_mut!(self.get_message(), msg_menu);
+        msg_menu.message = msg;
+        self.menu_stack.push(ViewsEnum::Message)
+    }
+
+    
+    pub fn push_army_placement(&mut self, armies: u32, player_id:u32) {
+        bind_mut!(self.get_army_placement(), menu);
+        menu.armies = armies;
+        menu.player_id = player_id;
+        self.menu_stack.push(ViewsEnum::ArmyPlacement);
+    }
+
 
 }
 
 
 pub trait EventReciever{
-
     fn handle_canvas_turn(&mut self, prov_id: u32);
     fn handle_canvas_army_placement(&mut self, prov_id: u32);
+    fn handle_canvas_move(&mut self, _prov_id: u32);
+    fn handle_end_turn(&mut self, can_reinforce:bool);
+    fn handle_ui_retreat(&mut self); 
+    fn handle_ui_dice_next(&mut self);
+    fn handle_ui_combat_roll(&mut self, is_attack: bool); 
 }
 
 pub struct  MenuStack{
