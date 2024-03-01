@@ -5,10 +5,9 @@ use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::{JsFuture, spawn_local};
 use web_sys::{CanvasRenderingContext2d, HtmlCanvasElement, HtmlImageElement, ImageBitmap, ImageData, MouseEvent};
 use crate::element_getters::*;
-use crate::game::{Game, ProvLookupTable};
+use crate::game::{Game};
 use crate::model::{Coord, Model, Province};
-
-extern crate queues;
+use crate::prov_lookup::ProvLookupTable;
 
 
 pub fn get_map_lookup_data(max_div: u32) -> ProvLookupTable {

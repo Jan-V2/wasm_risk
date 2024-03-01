@@ -11,6 +11,9 @@ mod data_include;
 mod syca;
 mod game_event_handlers;
 mod views;
+mod menu_stack;
+mod prov_lookup;
+mod macros;
 
 use std::cell::RefCell;
 use std::rc::Rc;

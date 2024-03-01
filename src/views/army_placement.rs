@@ -12,15 +12,17 @@ use crate::views::info::ViewInfo;
 
 pub struct ViewArmyPlacement{
     head: WrpDiv,
+    player_label: WrpDiv,
     count_label: WrpDiv,
     pub armies: u32,
+    pub player_id:u32,
     pub default_msg:String,
 }
 
 impl View for ViewArmyPlacement{
     fn update(&mut self) {
-        self.count_label.inline_txt(&format!("You still need to Place {} armies",
-                                           self.armies));
+        self.player_label.inline_txt(&format!("Player {}", self.player_id + 1));
+        self.count_label.inline_txt(&format!("You still need to Place {} armies", self.armies));
     }
 }
 
@@ -33,8 +35,9 @@ impl DefaultMsg for ViewInfo{
 
 
 impl ViewArmyPlacement{
-    pub fn reset(&mut self, armies:u32){
+    pub fn reset(&mut self, armies:u32, player_id:u32){
         self.armies = armies;
+        self.player_id = player_id;
         self.update();
     }
 }
@@ -44,16 +47,20 @@ impl_visibility!(ViewArmyPlacement);
 fn create_view_army_placement(_: Rc<RefCell<Game>>, mount_id:&str) -> ViewArmyPlacement{
     console_log!("creating army placement view");
 
+    let mut player_label = Div();
     let mut count_label = Div();
 
-    let head = Div().child(
-        count_label.get_clone()
-    ).mount(mount_id);
+    let head = Div().children(vec![
+        player_label.get_clone(),
+        count_label.get_clone(),
+    ]).mount(mount_id);
 
     return ViewArmyPlacement{
         head,
+        player_label,
         count_label,
         armies: 0,
+        player_id:0,
         default_msg: "Please click on a province, to place an army.".to_string(),
     };
 }
