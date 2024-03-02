@@ -42,14 +42,14 @@ impl Game {
         }
     }
 
-    fn handle_canvas_turn(&mut self, prov_id: u32) {
+    pub(super) fn handle_canvas_turn(&mut self, prov_id: u32) {
         if self.is_owned_by_active(&prov_id) {
             let prov_name = self.model.get_prov_from_id(&prov_id).unwrap().name.clone();
             if self.model.get_prov_from_id(&prov_id).unwrap().army_count > 1 {
                 self.state_turn.targets.attack = Some(prov_id);
                 self.display_default_ms(&format!("Attacking from {}", prov_name));
                 return;
-            } else {
+            } else {  
                 self.display_default_ms(&format!(
                     "Can't attack from {}. you need at least 2 armies",
                     prov_name
@@ -93,7 +93,7 @@ impl Game {
         self.log("turn".to_string())
     }
 
-    fn handle_canvas_army_placement(&mut self, prov_id: u32) {
+    pub(super) fn handle_canvas_army_placement(&mut self, prov_id: u32) {
         // handles the canvas click event for amry placement, then pops the stack
         self.log("handling canvas army placement".to_string());
 
@@ -124,11 +124,12 @@ impl Game {
                 }
             } else {
                 panic!("in placement state, with 0 armies to Place");
+                 
             }
         }
         if next_menu {
-            self.log("armyplacement: next_menu true popping stack".to_string());
-            self.pop_menu()
+            self.log("armyplacement: next_menu true, loading next menu".to_string());
+            self.activate_next_menu();         
         }
         self.draw_board();
     }
@@ -155,13 +156,13 @@ impl Game {
         ));
 
         {
-            let armies_per_player =
-                Rules::armies_per_players_start(self.model.get_player_count()).unwrap();
-            let placeable_armies = armies_per_player
-                - self
-                    .model
-                    .get_prov_count_owned_by_player(self.state_turn.active_player);
-            self.push_army_placement(placeable_armies);
+            let  placeable_armies = if self.debug {
+                3
+            } else {
+                Rules::armies_per_players_start(self.model.get_player_count()).unwrap() - self.model.get_prov_count_owned_by_player(self.state_turn.active_player)
+};
+
+                            self.push_army_placement(placeable_armies);
             self.activate_menu(self.menu_stack.get().unwrap());
         }
         if from_setup {
@@ -182,6 +183,7 @@ impl Game {
                 reinforcing_army_count = 3;
             }
             placement_menu.reset(reinforcing_army_count, self.state_turn.active_player);
+            let _ = self.menu_stack.clear();
             self.menu_stack.push(ViewsEnum::ArmyPlacement);
             self.push_message_view(format!(
                 "Because you own {} provinces, you're allowed \
@@ -192,7 +194,7 @@ impl Game {
         // pops the turn menu
         // should move on to next player if no reinforcements
         // otherwise should pop
-        self.pop_menu_async(1);
+        self.activate_menu_async(1);
     }
 
     pub fn push_message_view(&mut self, msg: String) {
@@ -241,7 +243,7 @@ impl Game {
     }
 
     pub fn handle_message_next(&mut self) {
-        self.pop_menu();
+        self.activate_next_menu();
     }
 
     pub fn handle_ui_combat_roll(&mut self, is_attack: bool) {
@@ -364,6 +366,6 @@ impl Game {
         self.log("retreat handle".to_string());
         bind_mut!(self.get_turn(), turn);
         turn.can_reinforce = false;
-        self.pop_menu();
+        self.activate_next_menu();
     }
 }

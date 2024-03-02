@@ -19,6 +19,7 @@ use js_sys::Math::sqrt;
 use marble::traits::View;
 use stack_stack::{stack, Stack};
 use std::cell::{RefCell, RefMut};
+use std::collections::VecDeque;
 use std::rc::Rc;
 /*
 todo start placement:
@@ -33,7 +34,7 @@ todo display player n's turn msg at the start of each turn
 pub struct GameTurnState {
     pub(super) targets: AttackDefendPair<Option<u32>>,
     pub(super) active_player: u32,
-    pub(super) in_initial_placement_phase: bool, //
+    pub(super) in_initial_placement_phase: bool,
     pub(super) in_setup: bool,
 }
 
@@ -54,16 +55,29 @@ create_getter!(combat, ViewCombat);
 create_getter!(dice_rolls, ViewDiceRoll);
 create_getter!(message, ViewMessage);
 
+pub enum Event {
+    CanvasClickTurn(Coord),
+    CanvasClickArmyPlacement(Coord),
+    CanvasClickMove(Coord),
+    CombatRetreat,
+    CombatRoll(bool),
+    DiceNext,
+    TurnEnd(bool),
+    MessageNext,
+}
+
 pub struct Game {
     pub model: Model,
     pub prov_lookup: ProvLookupTable,
     pub flag_scale: f64,
-    pub logging: bool,
+    pub debug: bool,
     pub state_turn: GameTurnState,
     pub view_main: Option<Rc<RefCell<ViewMain>>>,
     pub info_view: Rc<RefCell<ViewInfo>>,
     pub views: Option<ViewsStruct>,
     pub menu_stack: MenuStack,
+    pub event_queue: Rc<RefCell<VecDeque<Event>>>,
+    event_loop_running: bool,
     pub combat_state: CombatState,
     pub self_ref: Option<Rc<RefCell<Game>>>,
 }
@@ -74,56 +88,73 @@ impl Game {
             model: Model::new_from_json(),
             prov_lookup,
             flag_scale: 0.5,
-            logging: use_logging,
+            debug: use_logging,
             state_turn: GameTurnState::new(),
             view_main: None,
             info_view: create_view_info("text_out", "setup".to_string()),
             views: None,
             menu_stack: MenuStack::new(true),
+            event_queue: Rc::from(RefCell::from(VecDeque::new())),
+            event_loop_running: false,
             combat_state: CombatState::default(),
             self_ref: None,
         };
     }
 
-    pub fn pop_menu(&mut self) {
-        let stack_len = self.menu_stack.len();
-        self.log(format!("popping, stack len is {:?}", stack_len));
-        match stack_len {
-            0 => {
-                panic!("stack empty cannot pop");
-            }
-            1 => {
-                // this means that the current players turn has ended
-                //todo check if a player is knocked out and skip their turn
-                self.log("at last item in menu_stack, moving on to next player".to_string());
-                self.log(format!(
-                    "initial_placement_state = {:?}",
-                    self.state_turn.in_initial_placement_phase
-                ));
-                let _ = self.menu_stack.pop();
-                if self.state_turn.in_initial_placement_phase {
-                    self.start_placement_next_player(false);
-                } else {
-                    self.setup_next_turn();
-                }
-            }
-            2_u32..=u32::MAX => {
-                let _ = self.menu_stack.pop();
-                self.activate_menu(self.menu_stack.get().unwrap());
-            }
+    fn start_event_loop(&mut self, time_ms: u32) {
+        if self.event_loop_running {
+            panic!("event loop already started")
         }
+        self.event_loop_running = true;
+        self.event_loop(time_ms);
     }
 
-    pub fn pop_menu_async(&self, time_ms: u32) {
+    fn event_loop(&mut self, time_ms: u32) {
         let game_ref = self.self_ref.as_ref().unwrap().clone();
         let t = Timeout::new(time_ms, move || {
-            game_ref.borrow_mut().pop_menu();
-            console_log!("popped menu async")
+            let mut game_mut = game_ref.borrow_mut();
+            let queue_ref = game_mut.event_queue.clone();
+            if !queue_ref.borrow().is_empty() {
+                let event = queue_ref.borrow_mut().pop_front().unwrap();
+                game_mut.handle_events(event);
+            }
+            game_mut.event_loop(time_ms);
         });
         t.forget();
     }
 
+    pub fn handle_events(&mut self, event: Event) {
+        // todo refactor canvas handlers so they take raw coords
+        match event {
+            Event::CanvasClickTurn(_coord) => {
+                self.handle_canvas_turn(0);
+            }
+            Event::CanvasClickArmyPlacement(_coord) => {
+                self.handle_canvas_army_placement(0);
+            }
+            Event::CanvasClickMove(_coord) => {
+                self.handle_canvas_move(0);
+            }
+            Event::CombatRetreat => {
+                self.handle_ui_retreat();
+            }
+            Event::CombatRoll(is_attack) => {
+                self.handle_ui_combat_roll(is_attack);
+            }
+            Event::DiceNext => {
+                self.handle_ui_dice_next();
+            }
+            Event::TurnEnd(can_reinforce) => {
+                self.handle_end_turn(can_reinforce);
+            }
+            Event::MessageNext => {
+                self.handle_message_next();
+            }
+        }
+    }
+
     pub fn activate_menu(&mut self, menu: ViewsEnum) {
+        self.log(format!("activating menu of type:{:?}", menu));
         match menu {
             ViewsEnum::Turn => {
                 bind_mut!(self.get_turn(), turn);
@@ -158,31 +189,36 @@ impl Game {
         });
         t.forget();
     }
-    /*
-        pub(super) fn apply_combat_result_to_map(&mut self, state_combat: &StateCombat) {
-            self.log("combat finished handler".to_string());
-            let mut prov_attack = (*self.model.get_prov_from_id(
-                &state_combat.prov_id_attacker).unwrap()).clone();
-            let mut prov_defend  = (*self.model.get_prov_from_id(
-                &state_combat.prov_id_defender).unwrap()).clone();
 
-            if state_combat.armies_defending == 0 && state_combat.armies_attacking > 0{
-                // attacker won
-                self.log("attack succeeded".to_string());
-                prov_attack.army_count = 1;
-                prov_defend.army_count = state_combat.armies_attacking;
-                prov_defend.owner_id = prov_attack.owner_id;
-            }else {
-                // attack ongoing or failed
-                self.log("attack failed".to_string());
-                prov_attack.army_count = 1 + state_combat.armies_attacking; prov_defend.army_count = state_combat.armies_defending;
+    pub fn activate_next_menu(&mut self) {
+        let next_menu_opt = self.menu_stack.next_menu();
+        if next_menu_opt.is_some() {
+            self.log("activating next menu".to_string());
+            self.activate_menu(next_menu_opt.unwrap());
+        } else {
+            self.log("stack empty, moving on to next player".to_string());
+            self.log(format!(
+                "in placement phase is:{:?}",
+                self.state_turn.in_initial_placement_phase
+            ));
+            if self.state_turn.in_initial_placement_phase {
+                self.start_placement_next_player(false);
+            } else {
+                self.setup_next_turn();
             }
-            self.log(format!("{:?}", prov_attack));
-            self.model.set_prov(prov_attack);
-            self.model.set_prov(prov_defend);
-            self.draw_board();
         }
-    */
+    }
+
+    pub fn activate_next_menu_async(&self, time_ms: u32) {
+        let game_ref = self.self_ref.as_ref().unwrap().clone();
+        let t = Timeout::new(time_ms, move || {
+            let menu = game_ref.borrow().menu_stack.get().unwrap();
+            game_ref.borrow_mut().activate_menu(menu);
+            console_log!("popped menu async")
+        });
+        t.forget();
+    }
+
     pub fn handle_canvas_noop(&mut self, state: ViewsEnum) {
         self.log(format!("in state: {:?} the canvas is not handled", state))
     }
@@ -240,7 +276,7 @@ impl Game {
     }
 
     pub(super) fn log(&self, msg: String) {
-        if self.logging {
+        if self.debug {
             console_log!(msg)
         }
     }
@@ -252,31 +288,28 @@ impl Game {
         self.set_ui_state(UiState::LABEL);*/
     }
     /*
-        pub(super) fn set_ui_state(&mut self, state: UiState) {
-            self.state_turn.attack_target = None;
-            self.ui_man.select_view(&state);
-            self.config_sig.unwrap().ui_state.set(state.clone());
-            match state {
-                UiState::SETUP => {self.info_display_div.set_default(
-                    "".to_string())}
-                UiState::ARMY_PLACEMENT | UiState::ARMY_PLACEMENT_START => {
-                self.info_display_div.set_default(
-                    "Click on your own provinces to place your armies".to_string())}
-                UiState::TURN => {
-                    self.info_display_div.set_default(
-                    "Click on your own province to attack from there, or press end turn".to_string())}
-                UiState::MOVE => {todo!()}
-                UiState::COMBAT => {self.info_display_div.set_default(
-                    "Select the number of armies you want to use and click attack/defend".to_string())}
-                UiState::DICE_ROLL => {self.info_display_div.set_default(
-                    "".to_string())}
-                UiState::GAME_END => {self.info_display_div.set_default(
-                    "Game Over".to_string())}
-                UiState::CARD_SELECT => {todo!()}
-                UiState::LABEL => {
-                    self.info_display_div.set_default("".to_string())
-                }
+        pub(super) fn apply_combat_result_to_map(&mut self, state_combat: &StateCombat) {
+            self.log("combat finished handler".to_string());
+            let mut prov_attack = (*self.model.get_prov_from_id(
+                &state_combat.prov_id_attacker).unwrap()).clone();
+            kklet mut prov_defend  = (*self.model.get_prov_from_id(
+                &state_combat.prov_id_defender).unwrap()).clone();
+
+            if state_combat.armies_defending == 0 && state_combat.armies_attacking > 0{
+                // attacker won
+                self.log("attack succeeded".to_string());
+                prov_attack.army_count = 1;
+                prov_defend.army_count = state_combat.armies_attacking;
+                prov_defend.owner_id = prov_attack.owner_id;
+            }else {
+                // attack ongoing or failed
+                self.log("attack failed".to_string());
+                prov_attack.army_count = 1 + state_combat.armies_attacking; prov_defend.army_count = state_combat.armies_defending;
             }
+            self.log(format!("{:?}", prov_attack));
+            self.model.set_prov(prov_attack);
+            self.model.set_prov(prov_defend);
+            self.draw_board();
         }
     */
 
